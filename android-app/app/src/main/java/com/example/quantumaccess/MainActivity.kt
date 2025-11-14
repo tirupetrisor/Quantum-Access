@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.quantumaccess.ui.theme.QuantumAccessTheme
+import com.example.quantumaccess.ui.screens.SplashScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -29,16 +30,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MainScreen() {
-    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(text = "Quantum Access")
-        }
-    }
+    SplashScreen()
 }
 
 @Preview(showBackground = true, showSystemUi = true)
