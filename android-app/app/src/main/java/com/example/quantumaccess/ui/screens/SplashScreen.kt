@@ -51,12 +51,14 @@ private val BackgroundBlue = DeepBlue
 private val NeonGreen = SecureGreen
 
 @Composable
-fun SplashScreen(modifier: Modifier = Modifier) {
+fun SplashScreen(modifier: Modifier = Modifier, onContinue: () -> Unit = {}) {
     var showTagline by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         delay(900)
         showTagline = true
+        delay(900)
+        onContinue()
     }
 
     Box(
