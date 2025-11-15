@@ -4,6 +4,8 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.quantumaccess.ui.screens.BiometricLoginScreen
+import com.example.quantumaccess.ui.screens.LocationVerificationScreen
 import com.example.quantumaccess.ui.screens.RegisterScreen
 import com.example.quantumaccess.ui.screens.SplashScreen
 
@@ -21,8 +23,18 @@ fun AppNavGraph() {
             )
         }
         composable(Routes.Register) {
-            RegisterScreen()
+            RegisterScreen(
+                onLoginLink = {
+                    navController.navigate(Routes.BiometricLogin)
+                }
+            )
         }
+		composable(Routes.BiometricLogin) {
+			BiometricLoginScreen(onAuthenticate = { })
+		}
+		composable(Routes.LocationVerification) {
+			LocationVerificationScreen()
+		}
     }
 }
 
