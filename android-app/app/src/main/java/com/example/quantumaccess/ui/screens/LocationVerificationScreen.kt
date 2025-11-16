@@ -1,5 +1,17 @@
 package com.example.quantumaccess.ui.screens
 
+import android.Manifest
+import android.annotation.SuppressLint
+import android.content.Context
+import android.location.Location
+import android.location.LocationManager
+import android.location.Geocoder
+import android.os.Looper
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import android.content.pm.PackageManager
+import java.util.Locale
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -36,7 +48,12 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,14 +62,34 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.suspendCancellableCoroutine
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationTokenSource
 import com.example.quantumaccess.ui.components.QuantumLogo
 import com.example.quantumaccess.ui.theme.DeepBlue
 import com.example.quantumaccess.ui.theme.SecureGreen
+import androidx.compose.material3.OutlinedTextField
+import com.example.quantumaccess.ui.location.MapVisual
+import com.example.quantumaccess.ui.location.ManualLocationDialog
+import com.example.quantumaccess.ui.location.StatusBadgeAuthorized
+import com.example.quantumaccess.ui.location.StatusBadgeUnauthorized
+import com.example.quantumaccess.ui.location.StatusBadgeUnknown
+import com.example.quantumaccess.core.location.fetchFreshLocation
+import com.example.quantumaccess.core.location.haversineMeters
+import com.example.quantumaccess.core.location.verifyWithCurrentLocation
+import com.example.quantumaccess.core.location.GEOFENCE_RADIUS_METERS
+import com.example.quantumaccess.core.location.TIMISOARA_LAT
+import com.example.quantumaccess.core.location.TIMISOARA_LON
 
 @Composable
 fun LocationVerificationScreen(
@@ -60,6 +97,35 @@ fun LocationVerificationScreen(
 	onUseCurrentLocation: () -> Unit = {},
 	onEnterLocationManually: () -> Unit = {}
 ) {
+	val context = LocalContext.current
+	var authorized by remember { mutableStateOf<Boolean?>(null) }
+	var distanceMeters by remember { mutableStateOf<Double?>(null) }
+	var showManual by remember { mutableStateOf(false) }
+	val scope = rememberCoroutineScope()
+
+	val permissionGranted = remember {
+		ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+	}
+	var hasPermission by remember { mutableStateOf(permissionGranted) }
+
+	val requestPermission = rememberLauncherForActivityResult(
+		contract = ActivityResultContracts.RequestPermission(),
+		onResult = { granted ->
+			hasPermission = granted
+			if (granted) {
+				val (auth, dist) = verifyWithCurrentLocation(context)
+				authorized = auth
+				distanceMeters = dist
+			}
+		}
+	)
+
+	// Default: unknown until user acts
+	LaunchedEffect(Unit) {
+		authorized = null
+		distanceMeters = null
+	}
+
 	Box(
 		modifier = modifier
 			.fillMaxSize()
@@ -85,7 +151,11 @@ fun LocationVerificationScreen(
 				horizontalArrangement = Arrangement.Center,
 				verticalAlignment = Alignment.CenterVertically
 			) {
-				StatusBadgeAuthorized(modifier = Modifier.align(Alignment.CenterVertically))
+				when (authorized) {
+					true -> StatusBadgeAuthorized(modifier = Modifier.align(Alignment.CenterVertically))
+					false -> StatusBadgeUnauthorized(modifier = Modifier.align(Alignment.CenterVertically))
+					null -> StatusBadgeUnknown(modifier = Modifier.align(Alignment.CenterVertically))
+				}
 			}
 
 			Spacer(modifier = Modifier.height(16.dp))
@@ -99,11 +169,14 @@ fun LocationVerificationScreen(
 					.border(1.dp, Color(0xFFE5E7EB), RoundedCornerShape(24.dp))
 			) {
 				Column(modifier = Modifier.padding(16.dp)) {
-					MapVisual(modifier = Modifier
+					MapVisual(
+						authorized = authorized,
+						modifier = Modifier
 						.fillMaxWidth()
 						.height(300.dp)
 						.clip(RoundedCornerShape(16.dp))
-						.background(Color(0xFFF8FAFC)))
+						.background(Color(0xFFF8FAFC))
+					)
 
 					Spacer(modifier = Modifier.height(16.dp))
 
@@ -126,18 +199,48 @@ fun LocationVerificationScreen(
 						)
 					}
 					Spacer(modifier = Modifier.height(6.dp))
-					Text(
-						text = "Matched to nearest quantum node: Node-07 • 42 m",
-						color = Color(0xFF6B7280),
-						style = MaterialTheme.typography.bodySmall,
-						modifier = Modifier.fillMaxWidth(),
-						textAlign = TextAlign.Center
-					)
+					if (distanceMeters != null) {
+						val km = (distanceMeters ?: 0.0) / 1000.0
+						Text(
+							text = String.format(Locale.getDefault(), "Distance to Timișoara center: %.1f km", km),
+							color = Color(0xFF6B7280),
+							style = MaterialTheme.typography.bodySmall,
+							modifier = Modifier.fillMaxWidth(),
+							textAlign = TextAlign.Center
+						)
+					} else {
+						Text(
+							text = "Tap a button below to verify your location",
+							color = Color(0xFF6B7280),
+							style = MaterialTheme.typography.bodySmall,
+							modifier = Modifier.fillMaxWidth(),
+							textAlign = TextAlign.Center
+						)
+					}
 
 					Spacer(modifier = Modifier.height(16.dp))
 
 					Button(
-						onClick = onUseCurrentLocation,
+						onClick = {
+							if (!hasPermission) {
+								requestPermission.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+							} else {
+								scope.launch {
+									val loc = fetchFreshLocation(context)
+									if (loc != null) {
+										val dist = haversineMeters(loc.latitude, loc.longitude, TIMISOARA_LAT, TIMISOARA_LON)
+										distanceMeters = dist
+										authorized = dist <= GEOFENCE_RADIUS_METERS
+									} else {
+										// fallback to last known if current not available
+										val (auth, dist) = verifyWithCurrentLocation(context)
+										authorized = auth
+										distanceMeters = dist
+									}
+								}
+							}
+							onUseCurrentLocation()
+						},
 						colors = ButtonDefaults.buttonColors(containerColor = DeepBlue, contentColor = Color.White),
 						shape = RoundedCornerShape(16.dp),
 						modifier = Modifier.fillMaxWidth()
@@ -148,7 +251,10 @@ fun LocationVerificationScreen(
 					}
 					Spacer(modifier = Modifier.height(10.dp))
 					OutlinedButton(
-						onClick = onEnterLocationManually,
+						onClick = {
+							showManual = true
+							onEnterLocationManually()
+						},
 						shape = RoundedCornerShape(16.dp),
 						border = BorderStroke(1.dp, DeepBlue),
 						colors = ButtonDefaults.outlinedButtonColors(contentColor = DeepBlue),
@@ -158,93 +264,23 @@ fun LocationVerificationScreen(
 						Spacer(modifier = Modifier.size(8.dp))
 						Text(text = "Enter Location Manually", color = DeepBlue)
 					}
+
+					if (showManual) {
+						ManualLocationDialog(
+							onResolvedLocation = { lat, lon ->
+								scope.launch {
+									val dist = haversineMeters(lat, lon, TIMISOARA_LAT, TIMISOARA_LON)
+									distanceMeters = dist
+									authorized = dist <= GEOFENCE_RADIUS_METERS
+									showManual = false
+								}
+							},
+							onDismiss = { showManual = false }
+						)
+					}
 				}
 			}
 		}
-	}
-}
-
-@Composable
-private fun StatusBadgeAuthorized(modifier: Modifier = Modifier) {
-	Surface(
-		shape = RoundedCornerShape(22.dp),
-		shadowElevation = 6.dp,
-		color = Color.White,
-		modifier = modifier
-	) {
-		Row(
-			verticalAlignment = Alignment.CenterVertically,
-			modifier = Modifier
-				.border(1.dp, Color(0xFFE5E7EB), RoundedCornerShape(22.dp))
-				.padding(horizontal = 14.dp, vertical = 8.dp)
-		) {
-			Box(
-				modifier = Modifier
-					.size(10.dp)
-					.background(SecureGreen, CircleShape)
-			)
-			Spacer(modifier = Modifier.size(8.dp))
-			Icon(
-				imageVector = Icons.Filled.CheckCircle,
-				contentDescription = null,
-				tint = SecureGreen,
-				modifier = Modifier.size(16.dp)
-			)
-			Spacer(modifier = Modifier.size(8.dp))
-			Text(text = "Authorized Access", color = DeepBlue, fontSize = 14.sp)
-		}
-	}
-}
-
-@Composable
-private fun MapVisual(modifier: Modifier = Modifier) {
-	Box(modifier = modifier, contentAlignment = Alignment.Center) {
-		// faint constellation dots
-		Canvas(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-			val dots = listOf(
-				Offset(40f, 24f), Offset(120f, 48f), Offset(220f, 20f),
-				Offset(80f, 100f), Offset(180f, 90f), Offset(240f, 120f),
-				Offset(60f, 170f), Offset(150f, 180f), Offset(220f, 190f)
-			)
-			dots.forEach { p ->
-				drawCircle(color = Color(0xFFD1D5DB), radius = 3f, center = p)
-			}
-		}
-
-		// center marker with pulse
-		PulsingMarker()
-	}
-}
-
-@Composable
-private fun PulsingMarker() {
-	val infinite = rememberInfiniteTransition(label = "marker")
-	val scale by infinite.animateFloat(
-		initialValue = 0.9f,
-		targetValue = 1.15f,
-		animationSpec = infiniteRepeatable(
-			animation = tween(1400, easing = LinearEasing),
-			repeatMode = RepeatMode.Reverse
-		),
-		label = "scale"
-	)
-
-	Box(contentAlignment = Alignment.Center) {
-		// glow ring
-		Canvas(modifier = Modifier.size(64.dp).scale(scale)) {
-			drawCircle(
-				color = SecureGreen.copy(alpha = 0.25f),
-				radius = size.minDimension / 2f,
-				style = Stroke(width = size.minDimension * 0.08f, cap = StrokeCap.Round)
-			)
-		}
-		// pin
-		Icon(
-			imageVector = Icons.Filled.LocationOn,
-			contentDescription = null,
-			tint = SecureGreen,
-			modifier = Modifier.size(28.dp)
-		)
 	}
 }
 
