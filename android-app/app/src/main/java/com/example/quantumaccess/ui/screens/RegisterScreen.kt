@@ -35,8 +35,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -44,6 +46,7 @@ import com.example.quantumaccess.ui.components.InputField
 import com.example.quantumaccess.ui.components.QuantumButton
 import com.example.quantumaccess.ui.components.QuantumLogo
 import com.example.quantumaccess.ui.theme.DeepBlue
+import com.example.quantumaccess.data.local.PreferencesManager
 
 @Composable
 fun RegisterScreen(
@@ -57,6 +60,14 @@ fun RegisterScreen(
     var confirmPassword by remember { mutableStateOf("") }
     var biometricEnabled by remember { mutableStateOf(true) }
     var loading by remember { mutableStateOf(false) }
+
+    var nameError by remember { mutableStateOf<String?>(null) }
+    var usernameError by remember { mutableStateOf<String?>(null) }
+    var passwordError by remember { mutableStateOf<String?>(null) }
+    var confirmError by remember { mutableStateOf<String?>(null) }
+
+    val context = LocalContext.current
+    val prefs = remember { PreferencesManager(context) }
 
     Box(
         modifier = modifier
@@ -107,6 +118,14 @@ fun RegisterScreen(
                         labelIcon = Icons.Filled.Person
                     )
                     Spacer(modifier = Modifier.height(12.dp))
+                    if (nameError != null) {
+                        Text(
+                            text = nameError ?: "",
+                            color = Color(0xFFD32F2F),
+                            style = TextStyle(fontSize = 12.sp)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
                     InputField(
                         value = username,
                         onValueChange = { username = it },
@@ -115,6 +134,14 @@ fun RegisterScreen(
                         labelIcon = Icons.Filled.AlternateEmail
                     )
                     Spacer(modifier = Modifier.height(12.dp))
+                    if (usernameError != null) {
+                        Text(
+                            text = usernameError ?: "",
+                            color = Color(0xFFD32F2F),
+                            style = TextStyle(fontSize = 12.sp)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
                     InputField(
                         value = password,
                         onValueChange = { password = it },
@@ -124,6 +151,14 @@ fun RegisterScreen(
                         isPassword = true
                     )
                     Spacer(modifier = Modifier.height(12.dp))
+                    if (passwordError != null) {
+                        Text(
+                            text = passwordError ?: "",
+                            color = Color(0xFFD32F2F),
+                            style = TextStyle(fontSize = 12.sp)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
                     InputField(
                         value = confirmPassword,
                         onValueChange = { confirmPassword = it },
@@ -133,6 +168,14 @@ fun RegisterScreen(
                         isPassword = true
                     )
                     Spacer(modifier = Modifier.height(8.dp))
+                    if (confirmError != null) {
+                        Text(
+                            text = confirmError ?: "",
+                            color = Color(0xFFD32F2F),
+                            style = TextStyle(fontSize = 12.sp)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(top = 8.dp)
@@ -163,9 +206,24 @@ fun RegisterScreen(
                 loading = loading,
                 onClick = {
                     if (!loading) {
-                        loading = true
-                        onRegister(fullName, username, password, biometricEnabled)
-                        loading = false
+                        nameError = if (fullName.isBlank()) "Name is required" else null
+                        usernameError = if (username.length < 3) "Username must be at least 3 characters" else null
+                        passwordError = if (password.length < 6) "Password must be at least 6 characters" else null
+                        confirmError = if (confirmPassword != password) "Passwords do not match" else null
+
+                        val valid = listOf(nameError, usernameError, passwordError, confirmError).all { it == null }
+                        if (valid) {
+                            // verificare locală de unicitate pentru username
+                            val normalized = username.trim().lowercase()
+                            if (prefs.registeredUsernames.contains(normalized)) {
+                                usernameError = "Username already exists (local)"
+                                return@QuantumButton
+                            }
+                            loading = true
+                            onRegister(fullName, username, password, biometricEnabled)
+                            // revenim imediat din loading pentru a evita blocarea la erori
+                            loading = false
+                        }
                     }
                 },
                 modifier = Modifier.fillMaxWidth()
