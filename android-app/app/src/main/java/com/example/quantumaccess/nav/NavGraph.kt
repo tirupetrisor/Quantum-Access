@@ -6,6 +6,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.quantumaccess.ui.screens.BiometricLoginScreen
 import com.example.quantumaccess.ui.screens.LocationVerificationScreen
+import com.example.quantumaccess.ui.screens.DashboardScreen
+import com.example.quantumaccess.ui.screens.InitiateTransactionScreen
 import com.example.quantumaccess.ui.screens.RegisterScreen
 import com.example.quantumaccess.ui.screens.SplashScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -61,7 +63,35 @@ fun AppNavGraph() {
 			)
 		}
 		composable(Routes.LocationVerification) {
-			LocationVerificationScreen()
+			LocationVerificationScreen(
+				onContinueToDashboard = {
+					navController.navigate(Routes.Dashboard) {
+						popUpTo(Routes.LocationVerification) { inclusive = true }
+					}
+				}
+			)
+		}
+		composable(Routes.Dashboard) {
+			DashboardScreen(
+				onInitiateTransaction = {
+					navController.navigate(Routes.TransactionMode)
+				},
+				onOpenHistory = { /* TODO: navigate to history */ },
+				onOpenAnalytics = { /* TODO: navigate to analytics */ },
+				onLogoutConfirm = {
+					navController.navigate(Routes.BiometricLogin) {
+						popUpTo(Routes.Splash) { inclusive = false }
+					}
+				}
+			)
+		}
+		composable(Routes.TransactionMode) {
+			InitiateTransactionScreen(
+				onContinue = { amount, beneficiary, mode ->
+					// For now, return to dashboard after selecting mode.
+					navController.popBackStack()
+				}
+			)
 		}
     }
 }

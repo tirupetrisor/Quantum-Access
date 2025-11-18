@@ -1,25 +1,10 @@
 package com.example.quantumaccess.ui.screens
 
 import android.Manifest
-import android.annotation.SuppressLint
-import android.content.Context
-import android.location.Location
-import android.location.LocationManager
-import android.location.Geocoder
-import android.os.Looper
+import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.ContextCompat
-import android.content.pm.PackageManager
-import java.util.Locale
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -33,10 +18,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MyLocation
@@ -52,50 +35,40 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.suspendCancellableCoroutine
-import com.google.android.gms.location.LocationServices
-import com.google.android.gms.location.Priority
-import com.google.android.gms.tasks.CancellationTokenSource
-import com.example.quantumaccess.ui.components.QuantumLogo
-import com.example.quantumaccess.ui.theme.DeepBlue
-import com.example.quantumaccess.ui.theme.SecureGreen
-import androidx.compose.material3.OutlinedTextField
-import com.example.quantumaccess.ui.location.MapVisual
-import com.example.quantumaccess.ui.location.ManualLocationDialog
-import com.example.quantumaccess.ui.location.StatusBadgeAuthorized
-import com.example.quantumaccess.ui.location.StatusBadgeUnauthorized
-import com.example.quantumaccess.ui.location.StatusBadgeUnknown
-import com.example.quantumaccess.core.location.fetchFreshLocation
-import com.example.quantumaccess.core.location.haversineMeters
-import com.example.quantumaccess.core.location.verifyWithCurrentLocation
+import androidx.core.content.ContextCompat
 import com.example.quantumaccess.core.location.GEOFENCE_RADIUS_METERS
 import com.example.quantumaccess.core.location.TIMISOARA_LAT
 import com.example.quantumaccess.core.location.TIMISOARA_LON
+import com.example.quantumaccess.core.location.fetchFreshLocation
+import com.example.quantumaccess.core.location.haversineMeters
+import com.example.quantumaccess.core.location.verifyWithCurrentLocation
+import com.example.quantumaccess.ui.components.QuantumLogo
+import com.example.quantumaccess.ui.location.ManualLocationDialog
+import com.example.quantumaccess.ui.location.MapVisual
+import com.example.quantumaccess.ui.location.StatusBadgeAuthorized
+import com.example.quantumaccess.ui.location.StatusBadgeUnauthorized
+import com.example.quantumaccess.ui.location.StatusBadgeUnknown
+import com.example.quantumaccess.ui.theme.DeepBlue
+import kotlinx.coroutines.launch
+import java.util.Locale
 
 @Composable
 fun LocationVerificationScreen(
 	modifier: Modifier = Modifier,
 	onUseCurrentLocation: () -> Unit = {},
-	onEnterLocationManually: () -> Unit = {}
+	onEnterLocationManually: () -> Unit = {},
+	onContinueToDashboard: () -> Unit = {}
 ) {
 	val context = LocalContext.current
 	var authorized by remember { mutableStateOf<Boolean?>(null) }
@@ -277,6 +250,17 @@ fun LocationVerificationScreen(
 							},
 							onDismiss = { showManual = false }
 						)
+					}
+
+					Spacer(modifier = Modifier.height(12.dp))
+					Button(
+						onClick = { onContinueToDashboard() },
+						enabled = authorized == true,
+						colors = ButtonDefaults.buttonColors(containerColor = DeepBlue, contentColor = Color.White),
+						shape = RoundedCornerShape(16.dp),
+						modifier = Modifier.fillMaxWidth()
+					) {
+						Text(text = "Continue")
 					}
 				}
 			}
