@@ -52,7 +52,13 @@ fun AppNavGraph() {
             )
         }
 		composable(Routes.BiometricLogin) {
-			BiometricLoginScreen(onAuthenticate = { })
+			BiometricLoginScreen(
+				onAuthenticate = {
+					navController.navigate(Routes.LocationVerification) {
+						popUpTo(Routes.BiometricLogin) { inclusive = true }
+					}
+				}
+			)
 		}
 		composable(Routes.LocationVerification) {
 			LocationVerificationScreen()

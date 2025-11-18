@@ -1,5 +1,9 @@
 package com.example.quantumaccess.ui.screens
 
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -23,17 +27,22 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
+import com.example.quantumaccess.data.local.PreferencesManager
 import com.example.quantumaccess.ui.components.QuantumLogo
 import com.example.quantumaccess.ui.theme.DeepBlue
 
@@ -42,6 +51,43 @@ fun BiometricLoginScreen(
 	modifier: Modifier = Modifier,
 	onAuthenticate: () -> Unit = {}
 ) {
+	val context = LocalContext.current
+	val executor = remember { ContextCompat.getMainExecutor(context) }
+	val prefs = remember { PreferencesManager(context) }
+	val biometricManager = remember { BiometricManager.from(context) }
+	val activity = remember { context.findFragmentActivity() }
+
+	fun launchBiometric() {
+		val allowed = BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+		val canAuth = biometricManager.canAuthenticate(allowed)
+		// If biometric disabled in prefs or not available, continue without prompt (demo-friendly)
+		if (!prefs.biometricEnabled || canAuth != BiometricManager.BIOMETRIC_SUCCESS || activity == null) {
+			onAuthenticate()
+			return
+		}
+		val prompt = BiometricPrompt(
+			activity,
+			executor,
+			object : BiometricPrompt.AuthenticationCallback() {
+				override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+					onAuthenticate()
+				}
+				override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+					// do nothing; user can retry
+				}
+				override fun onAuthenticationFailed() {
+					// do nothing; user can retry
+				}
+			}
+		)
+		val promptInfo = BiometricPrompt.PromptInfo.Builder()
+			.setTitle("Biometric authentication")
+			.setSubtitle("Authenticate to continue")
+			.setAllowedAuthenticators(allowed)
+			.build()
+		prompt.authenticate(promptInfo)
+	}
+
 	Box(
 		modifier = modifier
 			.fillMaxSize()
@@ -67,9 +113,18 @@ fun BiometricLoginScreen(
 				lineHeight = 32.sp
 			)
 			Spacer(modifier = Modifier.height(32.dp))
-			FingerprintPulseButton(onClick = onAuthenticate)
+			FingerprintPulseButton(onClick = { launchBiometric() })
 		}
 	}
+}
+
+private fun Context.findFragmentActivity(): FragmentActivity? {
+	var current: Context? = this
+	while (current is ContextWrapper) {
+		if (current is FragmentActivity) return current
+		current = current.baseContext
+	}
+	return null
 }
 
 @Composable
