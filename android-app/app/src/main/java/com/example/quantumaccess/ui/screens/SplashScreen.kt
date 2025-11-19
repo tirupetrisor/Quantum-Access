@@ -55,9 +55,9 @@ fun SplashScreen(modifier: Modifier = Modifier, onContinue: () -> Unit = {}) {
     var showTagline by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        delay(900)
+        delay(500)
         showTagline = true
-        delay(900)
+        delay(500)
         onContinue()
     }
 
