@@ -61,7 +61,7 @@ fun InputField(
     )
 
     Column(modifier = modifier.fillMaxWidth()) {
-        Row {
+        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
             if (labelIcon != null) {
                 Icon(imageVector = labelIcon, contentDescription = null, tint = Color(0xFF9E9E9E))
                 Spacer(modifier = Modifier.width(6.dp))

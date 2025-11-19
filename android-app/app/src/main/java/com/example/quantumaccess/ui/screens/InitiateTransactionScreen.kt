@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -62,27 +63,32 @@ fun InitiateTransactionScreen(
 			modifier = Modifier
 				.padding(horizontal = 16.dp, vertical = 12.dp)
 				.fillMaxSize(),
-			verticalArrangement = Arrangement.Top
+			verticalArrangement = Arrangement.SpaceBetween
 		) {
-			Surface(
+			Box(
+				modifier = Modifier
+					.fillMaxWidth()
+					.weight(1f),
+				contentAlignment = Alignment.Center
+			) {
+				Surface(
 				shape = RoundedCornerShape(20.dp),
 				shadowElevation = 10.dp,
 				color = Color.White,
 				modifier = Modifier
 					.fillMaxWidth()
 					.widthIn(max = 420.dp)
-					.align(Alignment.CenterHorizontally)
-					.weight(1f),
+					.align(Alignment.Center),
 				tonalElevation = 0.dp,
 				border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF1F5F9))
-			) {
+				) {
 				Column(
 					modifier = Modifier
-						.fillMaxSize()
+						.fillMaxWidth()
 						.padding(20.dp),
 					verticalArrangement = Arrangement.Top
 				) {
-					Spacer(modifier = Modifier.height(56.dp))
+					Spacer(modifier = Modifier.height(20.dp))
 					Text(
 						text = "Initiate Transaction",
 						style = MaterialTheme.typography.titleLarge,
@@ -92,7 +98,7 @@ fun InitiateTransactionScreen(
 						textAlign = TextAlign.Center
 					)
 
-					Spacer(modifier = Modifier.height(24.dp))
+					Spacer(modifier = Modifier.height(20.dp))
 					InputField(
 						value = amount,
 						onValueChange = { amount = it },
@@ -100,7 +106,7 @@ fun InitiateTransactionScreen(
 						placeholder = "0.00",
 						labelIcon = Icons.Filled.Euro
 					)
-					Spacer(modifier = Modifier.height(20.dp))
+					Spacer(modifier = Modifier.height(24.dp))
 					InputField(
 						value = beneficiary,
 						onValueChange = { beneficiary = it },
@@ -109,11 +115,17 @@ fun InitiateTransactionScreen(
 						labelIcon = Icons.Filled.Person
 					)
 
-					Spacer(modifier = Modifier.height(20.dp))
-					Divider(color = Color(0xFFE5E7EB))
-					Spacer(modifier = Modifier.height(20.dp))
-					Text(text = "Transaction Mode", color = Color(0xFF6B7280), style = MaterialTheme.typography.bodySmall)
-					Spacer(modifier = Modifier.height(10.dp))
+					Spacer(modifier = Modifier.height(24.dp))
+					Spacer(modifier = Modifier.height(32.dp))
+					Text(
+						text = "Select Transaction Mode",
+						style = MaterialTheme.typography.titleLarge,
+						color = DeepBlue,
+						fontWeight = FontWeight.SemiBold,
+						modifier = Modifier.fillMaxWidth(),
+						textAlign = TextAlign.Center
+					)
+					Spacer(modifier = Modifier.height(16.dp))
 
 					// Normal card
 					ModeCard(
@@ -133,15 +145,16 @@ fun InitiateTransactionScreen(
 						enabled = true
 					)
 
-					Spacer(modifier = Modifier.height(24.dp))
-					PrimaryButton(
-						text = "Continue",
-						enabled = amount.isNotBlank() && beneficiary.isNotBlank(),
-						onClick = { onContinue(amount.trim(), beneficiary.trim(), selectedMode) }
-					)
-					Spacer(modifier = Modifier.weight(1f))
+					Spacer(modifier = Modifier.height(8.dp))
+				}
 				}
 			}
+			PrimaryButton(
+				text = "Continue",
+				enabled = amount.isNotBlank() && beneficiary.isNotBlank(),
+				onClick = { onContinue(amount.trim(), beneficiary.trim(), selectedMode) }
+			)
+			Spacer(modifier = Modifier.height(8.dp))
 		}
 	}
 }
@@ -151,6 +164,7 @@ private fun HeaderBar() {
 	Box(
 		modifier = Modifier
 			.fillMaxWidth()
+			.statusBarsPadding()
 			.background(DeepBlue)
 			.padding(horizontal = 16.dp, vertical = 14.dp)
 	) {
