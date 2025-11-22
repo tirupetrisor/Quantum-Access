@@ -11,6 +11,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.quantumaccess.ui.screens.AnalyticsDashboardScreen
 import com.example.quantumaccess.ui.screens.BiometricLoginScreen
 import com.example.quantumaccess.ui.screens.DashboardScreen
 import com.example.quantumaccess.ui.screens.InitiateTransactionScreen
@@ -19,6 +20,7 @@ import com.example.quantumaccess.ui.screens.NormalTransactionProcessingScreen
 import com.example.quantumaccess.ui.screens.RegisterScreen
 import com.example.quantumaccess.ui.screens.SplashScreen
 import com.example.quantumaccess.ui.screens.TransactionMode
+import com.example.quantumaccess.ui.screens.TransactionHistoryScreen
 import com.example.quantumaccess.ui.screens.QuantumTransactionProcessingScreen
 import com.example.quantumaccess.viewmodel.RegisterViewModel
 import kotlin.random.Random
@@ -83,9 +85,47 @@ fun AppNavGraph() {
 				onInitiateTransaction = {
 					navController.navigate(Routes.TransactionMode)
 				},
-				onOpenHistory = { /* TODO: navigate to history */ },
-				onOpenAnalytics = { /* TODO: navigate to analytics */ },
+				onOpenHistory = { navController.navigate(Routes.TransactionHistory) },
+				onOpenAnalytics = { navController.navigate(Routes.Analytics) },
 				onLogoutConfirm = {
+					navController.navigate(Routes.BiometricLogin) {
+						popUpTo(Routes.Splash) { inclusive = false }
+					}
+				}
+			)
+		}
+		composable(Routes.TransactionHistory) {
+			val context = LocalContext.current
+			TransactionHistoryScreen(
+				onReturnToDashboard = {
+					val popped = navController.popBackStack(Routes.Dashboard, inclusive = false)
+					if (!popped) {
+						navController.navigate(Routes.Dashboard) {
+							popUpTo(Routes.Splash) { inclusive = false }
+						}
+					}
+				},
+				onLoadMore = {
+					Toast.makeText(context, "Loading more transactions soon", Toast.LENGTH_SHORT).show()
+				},
+				onLogout = {
+					navController.navigate(Routes.BiometricLogin) {
+						popUpTo(Routes.Splash) { inclusive = false }
+					}
+				}
+			)
+		}
+		composable(Routes.Analytics) {
+			AnalyticsDashboardScreen(
+				onReturnToDashboard = {
+					val popped = navController.popBackStack(Routes.Dashboard, inclusive = false)
+					if (!popped) {
+						navController.navigate(Routes.Dashboard) {
+							popUpTo(Routes.Splash) { inclusive = false }
+						}
+					}
+				},
+				onLogout = {
 					navController.navigate(Routes.BiometricLogin) {
 						popUpTo(Routes.Splash) { inclusive = false }
 					}
