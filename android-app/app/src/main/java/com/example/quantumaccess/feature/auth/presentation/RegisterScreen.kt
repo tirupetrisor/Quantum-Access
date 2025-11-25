@@ -50,8 +50,6 @@ import com.example.quantumaccess.core.designsystem.theme.BorderSubtle
 import com.example.quantumaccess.core.designsystem.theme.DeepBlue
 import com.example.quantumaccess.core.designsystem.theme.ForestGreen
 import com.example.quantumaccess.core.designsystem.theme.NightBlack
-import com.example.quantumaccess.core.designsystem.theme.Slate800
-import com.example.quantumaccess.data.local.PreferencesManager
 
 @Composable
 fun RegisterScreen(
@@ -70,9 +68,6 @@ fun RegisterScreen(
     var usernameError by remember { mutableStateOf<String?>(null) }
     var passwordError by remember { mutableStateOf<String?>(null) }
     var confirmError by remember { mutableStateOf<String?>(null) }
-
-    val context = LocalContext.current
-    val prefs = remember { PreferencesManager(context) }
 
     Box(
         modifier = modifier
@@ -218,15 +213,8 @@ fun RegisterScreen(
 
                         val valid = listOf(nameError, usernameError, passwordError, confirmError).all { it == null }
                         if (valid) {
-                            // verificare locală de unicitate pentru username
-                            val normalized = username.trim().lowercase()
-                            if (prefs.registeredUsernames.contains(normalized)) {
-                                usernameError = "Username already exists (local)"
-                                return@PrimaryActionButton
-                            }
                             loading = true
                             onRegister(fullName, username, password, biometricEnabled)
-                            // revenim imediat din loading pentru a evita blocarea la erori
                             loading = false
                         }
                     }
@@ -256,4 +244,3 @@ private fun secureGreenCheckColor(): Color = Color(0xFF4CAF50)
 private fun RegisterPreview() {
     RegisterScreen()
 }
-
