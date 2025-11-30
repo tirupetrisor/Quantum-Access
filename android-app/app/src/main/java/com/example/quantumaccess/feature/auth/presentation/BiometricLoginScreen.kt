@@ -42,7 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
-import com.example.quantumaccess.data.local.PreferencesManager
+import com.example.quantumaccess.data.local.SecurePrefsManager
 import com.example.quantumaccess.core.designsystem.components.QuantumLogo
 import com.example.quantumaccess.core.designsystem.theme.DeepBlue
 
@@ -53,7 +53,7 @@ fun BiometricLoginScreen(
 ) {
 	val context = LocalContext.current
 	val executor = remember { ContextCompat.getMainExecutor(context) }
-	val prefs = remember { PreferencesManager(context) }
+	val prefs = remember { SecurePrefsManager(context) }
 	val biometricManager = remember { BiometricManager.from(context) }
 	val activity = remember { context.findFragmentActivity() }
 
@@ -61,7 +61,7 @@ fun BiometricLoginScreen(
 		val allowed = BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
 		val canAuth = biometricManager.canAuthenticate(allowed)
 		// If biometric disabled in prefs or not available, continue without prompt (demo-friendly)
-		if (!prefs.biometricEnabled || canAuth != BiometricManager.BIOMETRIC_SUCCESS || activity == null) {
+		if (!prefs.isBiometricEnabled() || canAuth != BiometricManager.BIOMETRIC_SUCCESS || activity == null) {
 			onAuthenticate()
 			return
 		}

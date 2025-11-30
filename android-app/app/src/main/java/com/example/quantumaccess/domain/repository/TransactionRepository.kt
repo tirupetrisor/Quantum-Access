@@ -8,5 +8,7 @@ interface TransactionRepository {
     fun getTransactionHistory(): List<TransactionHistoryEntry>
     fun getSecurityDistribution(): List<TransactionAnalyticsSlice>
     fun getQuantumProcessSteps(): List<QuantumProcessStep>
+    
+    // Add support for inserting transactions
+    suspend fun insertTransaction(amount: Double, mode: String, status: String, intercepted: Boolean)
 }
-
