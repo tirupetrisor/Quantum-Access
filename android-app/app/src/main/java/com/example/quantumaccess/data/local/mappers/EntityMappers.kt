@@ -18,10 +18,12 @@ fun LocalTransactionEntity.toDomainModel(): TransactionHistoryEntry {
     return TransactionHistoryEntry(
         id = this.transactionId.hashCode(), // Conversie UUID -> Int (limitare domain model existent)
         title = "Transaction ${this.mode}",
+        beneficiary = this.beneficiary,
         dateTime = DateTimeFormatter.ofPattern("MMM dd, HH:mm")
             .withZone(ZoneId.systemDefault())
             .format(this.createdAt),
         amountFormatted = NumberFormat.getCurrencyInstance(Locale.US).format(this.amount),
+        amountValue = this.amount,
         direction = if (this.amount < 0) TransactionDirection.DEBIT else TransactionDirection.CREDIT, // Presupunere: negativ = debit
         channel = if (this.mode == "QUANTUM") TransactionChannel.QUANTUM else TransactionChannel.NORMAL,
         statusMessage = this.status,

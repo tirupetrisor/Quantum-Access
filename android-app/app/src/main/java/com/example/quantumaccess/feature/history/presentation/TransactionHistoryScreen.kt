@@ -22,16 +22,22 @@ import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.ReportProblem
 import androidx.compose.material.icons.rounded.AccountBalance
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Icon
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -73,6 +79,7 @@ import com.example.quantumaccess.domain.model.TransactionDirection
 import com.example.quantumaccess.domain.model.TransactionHistoryEntry
 import com.example.quantumaccess.domain.model.TransactionSecurityState
 import com.example.quantumaccess.domain.repository.TransactionRepository
+import kotlinx.coroutines.launch
 
 @Composable
 fun TransactionHistoryScreen(
@@ -82,14 +89,43 @@ fun TransactionHistoryScreen(
 	onLogout: () -> Unit = {},
 	transactionRepository: TransactionRepository = RepositoryProvider.transactionRepository
 ) {
-	val transactions = remember(transactionRepository) { transactionRepository.getTransactionHistory() }
+	val coroutineScope = rememberCoroutineScope()
+	val transactions by transactionRepository
+		.observeTransactionHistory()
+		.collectAsState(initial = emptyList())
 	var selectedFilter by remember { mutableStateOf(HistoryFilter.All) }
+	var visibleCount by remember { mutableIntStateOf(3) }
 
-	val displayedTransactions = remember(selectedFilter, transactions) {
+	val filteredTransactions = remember(selectedFilter, transactions) {
 		when (selectedFilter) {
 			HistoryFilter.All -> transactions
 			HistoryFilter.Quantum -> transactions.filter { it.channel == TransactionChannel.QUANTUM }
 			HistoryFilter.Normal -> transactions.filter { it.channel == TransactionChannel.NORMAL }
+		}
+	}
+
+	val displayedTransactions = remember(filteredTransactions, visibleCount) {
+		filteredTransactions.take(visibleCount)
+	}
+
+	// Reset visible count when filter changes
+	LaunchedEffect(selectedFilter) {
+		visibleCount = 3
+	}
+
+	fun duplicateTransaction(entry: TransactionHistoryEntry) {
+		coroutineScope.launch {
+			val mode = when (entry.channel) {
+				TransactionChannel.QUANTUM -> "QUANTUM"
+				TransactionChannel.NORMAL -> "NORMAL"
+			}
+			transactionRepository.insertTransaction(
+				amount = entry.amountValue,
+				mode = mode,
+				status = DuplicateStatusMessage,
+				intercepted = false,
+				beneficiary = entry.beneficiary
+			)
 		}
 	}
 
@@ -118,17 +154,22 @@ fun TransactionHistoryScreen(
 					)
 				}
 				items(displayedTransactions, key = { it.id }) { entry ->
-					TransactionHistoryCard(entry = entry)
+					TransactionHistoryCard(
+						entry = entry,
+						onDuplicate = { duplicateTransaction(entry) }
+					)
 				}
 				item {
 					Column(
 						modifier = Modifier.fillMaxWidth(),
 						verticalArrangement = Arrangement.spacedBy(12.dp)
 					) {
-						PrimaryActionButton(
-							text = "Load More Transactions",
-							onClick = onLoadMore
-						)
+						if (visibleCount < filteredTransactions.size) {
+							PrimaryActionButton(
+								text = "Load More Transactions",
+								onClick = { visibleCount += 3 }
+							)
+						}
 						PrimaryActionButton(
 							text = "Return to Dashboard",
 							onClick = onReturnToDashboard
@@ -213,15 +254,18 @@ private fun HistoryFilterChip(
 }
 
 @Composable
-private fun TransactionHistoryCard(entry: TransactionHistoryEntry) {
+private fun TransactionHistoryCard(
+	entry: TransactionHistoryEntry,
+	onDuplicate: () -> Unit
+) {
 	val uiModel = remember(entry) { entry.toUiModel() }
 	Surface(
 		color = Color.White,
-		shape = RoundedCornerShape(24.dp),
-		shadowElevation = 4.dp,
+		shape = RoundedCornerShape(16.dp),
+		shadowElevation = 3.dp,
 		modifier = Modifier.fillMaxWidth()
 	) {
-		Column(modifier = Modifier.padding(20.dp)) {
+		Column(modifier = Modifier.padding(14.dp)) {
 			Row(
 				modifier = Modifier.fillMaxWidth(),
 				horizontalArrangement = Arrangement.SpaceBetween,
@@ -230,7 +274,7 @@ private fun TransactionHistoryCard(entry: TransactionHistoryEntry) {
 				Row(verticalAlignment = Alignment.CenterVertically) {
 					Box(
 						modifier = Modifier
-							.size(52.dp)
+							.size(42.dp)
 							.clip(CircleShape)
 							.background(uiModel.avatarBackground),
 						contentAlignment = Alignment.Center
@@ -239,24 +283,24 @@ private fun TransactionHistoryCard(entry: TransactionHistoryEntry) {
 							imageVector = uiModel.avatarIcon,
 							contentDescription = null,
 							tint = uiModel.avatarTint,
-							modifier = Modifier.size(26.dp)
+							modifier = Modifier.size(22.dp)
 						)
 					}
-					Spacer(modifier = Modifier.width(14.dp))
+					Spacer(modifier = Modifier.width(12.dp))
 					Column {
 						Text(
 							text = entry.title,
 							color = NightBlack,
-							style = MaterialTheme.typography.titleMedium,
+							style = MaterialTheme.typography.titleSmall,
 							fontWeight = FontWeight.Medium,
 							maxLines = 1,
 							overflow = TextOverflow.Ellipsis
 						)
-						Spacer(modifier = Modifier.height(4.dp))
+						Spacer(modifier = Modifier.height(2.dp))
 						Text(
 							text = entry.dateTime,
 							color = Steel300,
-							style = MaterialTheme.typography.bodySmall
+							style = MaterialTheme.typography.labelSmall
 						)
 					}
 				}
@@ -264,13 +308,13 @@ private fun TransactionHistoryCard(entry: TransactionHistoryEntry) {
 					Text(
 						text = uiModel.amount,
 						color = uiModel.amountColor,
-						style = MaterialTheme.typography.titleMedium,
+						style = MaterialTheme.typography.titleSmall,
 						fontWeight = FontWeight.SemiBold
 					)
-					Spacer(modifier = Modifier.height(6.dp))
+					Spacer(modifier = Modifier.height(4.dp))
 					Row(
 						verticalAlignment = Alignment.CenterVertically,
-						horizontalArrangement = Arrangement.spacedBy(6.dp)
+						horizontalArrangement = Arrangement.spacedBy(5.dp)
 					) {
 						Surface(
 							color = uiModel.badgeBackground,
@@ -280,36 +324,36 @@ private fun TransactionHistoryCard(entry: TransactionHistoryEntry) {
 							Text(
 								text = uiModel.badgeLabel,
 								color = uiModel.badgeTextColor,
-								style = MaterialTheme.typography.labelMedium,
+								style = MaterialTheme.typography.labelSmall,
 								fontWeight = FontWeight.Medium,
-								modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+								modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
 							)
 						}
 						Box(
 							modifier = Modifier
-								.size(8.dp)
+								.size(6.dp)
 								.clip(CircleShape)
 								.background(uiModel.badgeIndicatorColor)
 						)
 					}
 				}
 			}
-			Spacer(modifier = Modifier.height(16.dp))
+			Spacer(modifier = Modifier.height(12.dp))
 			Box(
 				modifier = Modifier
 					.fillMaxWidth()
 					.height(1.dp)
 					.background(Cloud250)
 			)
-			Spacer(modifier = Modifier.height(10.dp))
+			Spacer(modifier = Modifier.height(8.dp))
 			Row(verticalAlignment = Alignment.CenterVertically) {
 				Icon(
 					imageVector = uiModel.statusIcon,
 					contentDescription = null,
 					tint = uiModel.statusColor,
-					modifier = Modifier.size(16.dp)
+					modifier = Modifier.size(14.dp)
 				)
-				Spacer(modifier = Modifier.width(8.dp))
+				Spacer(modifier = Modifier.width(6.dp))
 				Text(
 					text = entry.statusMessage,
 					color = uiModel.statusColor,
@@ -317,6 +361,57 @@ private fun TransactionHistoryCard(entry: TransactionHistoryEntry) {
 					fontWeight = FontWeight.Medium
 				)
 			}
+			Spacer(modifier = Modifier.height(12.dp))
+			TransactionRecipientRow(
+				recipient = uiModel.recipientName,
+				onDuplicate = onDuplicate
+			)
+		}
+	}
+}
+
+@Composable
+private fun TransactionRecipientRow(
+	recipient: String,
+	onDuplicate: () -> Unit
+) {
+	Row(
+		modifier = Modifier.fillMaxWidth(),
+		horizontalArrangement = Arrangement.SpaceBetween,
+		verticalAlignment = Alignment.CenterVertically
+	) {
+		Column(
+			modifier = Modifier.weight(1f),
+			verticalArrangement = Arrangement.spacedBy(2.dp)
+		) {
+			Text(
+				text = "Sent to",
+				color = Slate600,
+				style = MaterialTheme.typography.labelSmall,
+				fontWeight = FontWeight.Medium
+			)
+			Text(
+				text = recipient,
+				color = NightBlack,
+				style = MaterialTheme.typography.bodyMedium,
+				maxLines = 1,
+				overflow = TextOverflow.Ellipsis
+			)
+		}
+		TextButton(onClick = onDuplicate) {
+			Icon(
+				imageVector = Icons.Rounded.ContentCopy,
+				contentDescription = null,
+				tint = DeepBlue,
+				modifier = Modifier.size(16.dp)
+			)
+			Spacer(modifier = Modifier.width(6.dp))
+			Text(
+				text = "Duplicate",
+				color = DeepBlue,
+				style = MaterialTheme.typography.labelMedium,
+				fontWeight = FontWeight.SemiBold
+			)
 		}
 	}
 }
@@ -328,6 +423,7 @@ private enum class HistoryFilter(val label: String) {
 }
 
 private val ScreenBackground = Cloud100
+private const val DuplicateStatusMessage = "Duplicated from history"
 
 private data class TransactionHistoryUiModel(
 	val amount: String,
@@ -340,7 +436,8 @@ private data class TransactionHistoryUiModel(
 	val statusIcon: ImageVector,
 	val avatarIcon: ImageVector,
 	val avatarBackground: Color,
-	val avatarTint: Color
+	val avatarTint: Color,
+	val recipientName: String
 )
 
 private fun TransactionHistoryEntry.toUiModel(): TransactionHistoryUiModel {
@@ -401,7 +498,8 @@ private fun TransactionHistoryEntry.toUiModel(): TransactionHistoryUiModel {
 		statusIcon = statusIcon,
 		avatarIcon = avatarIcon,
 		avatarBackground = avatarBackground,
-		avatarTint = avatarTint
+		avatarTint = avatarTint,
+		recipientName = beneficiary
 	)
 }
 

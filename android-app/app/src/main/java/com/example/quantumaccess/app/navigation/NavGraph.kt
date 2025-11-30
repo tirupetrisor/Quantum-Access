@@ -4,6 +4,8 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
@@ -13,6 +15,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.quantumaccess.feature.analytics.presentation.AnalyticsDashboardScreen
 import com.example.quantumaccess.feature.auth.presentation.BiometricLoginScreen
+import com.example.quantumaccess.feature.auth.presentation.BiometricSetupScreen
 import com.example.quantumaccess.feature.auth.presentation.RegisterScreen
 import com.example.quantumaccess.feature.dashboard.presentation.DashboardScreen
 import com.example.quantumaccess.feature.history.presentation.TransactionHistoryScreen
@@ -41,11 +44,13 @@ fun AppNavGraph() {
 		composable(Routes.Register) {
 			val vm: RegisterViewModel = viewModel()
 			val context = LocalContext.current
+            val uiState by vm.uiState.collectAsState()
+            
 			LaunchedEffect(Unit) {
 				vm.events.collect { ev ->
 					when (ev) {
 						is RegisterViewModel.Event.Success -> {
-							navController.navigate(Routes.BiometricLogin) {
+							navController.navigate(Routes.BiometricSetup) {
 								popUpTo(Routes.Register) { inclusive = true }
 							}
 						}
@@ -56,19 +61,78 @@ fun AppNavGraph() {
 				}
 			}
 			RegisterScreen(
-				onRegister = { fullName, username, password, biometric ->
-					vm.register(fullName, username, password, biometric)
+                uiState = uiState,
+				onRegister = { fullName, username, email, password, biometric ->
+                    // We ignore biometric checkbox from RegisterScreen if we are moving to Setup Screen, 
+                    // OR we pass it. The user prompt says "Register & Continue -> Biometric Setup".
+                    // So we should probably disable biometric here or assume false and let Setup handle it.
+                    // However, the prompt said "Biometric Setup Screen (dacă login cu Google) OR (Enable fingerprint?)".
+                    // Let's stick to: Register -> Success -> Setup Screen.
+                    // So we pass biometricEnabled=false initially to repo (or we can pass it and if true, skip setup? No, prompts asks for Setup Screen).
+                    // Let's assume we pass false here to force the setup screen flow, OR we use the existing logic but navigate to Setup instead of Login.
+                    
+					vm.register(fullName, username, email, password, false)
 				},
-				onLoginLink = { navController.navigate(Routes.BiometricLogin) }
+				onGoogleSignInSuccess = { email, name, googleId, biometricEnabled ->
+                    // Ignore checkbox for Google too, go to setup
+					vm.onGoogleSignInSuccess(email, name, googleId, false)
+				},
+				onLoginLink = { navController.navigate(Routes.BiometricLogin) },
+                onClearErrors = { vm.clearErrors() }
 			)
 		}
+        composable(Routes.BiometricSetup) {
+            val context = LocalContext.current
+            // In a real app, we'd use a ViewModel to enable biometric for the current user.
+            // For now, we can use SecurePrefsManager directly or a ViewModel.
+            // Since we don't have a BiometricViewModel, we'll use a simple side effect or assume the user is "logged in" in memory.
+            // But wait, we need to update the DB or Prefs for the CURRENT user.
+            // The RegisterViewModel just registered them.
+            // For simplicity in this "mock" flow without a SessionManager:
+            // We'll just set the global preference.
+            
+            val prefs = com.example.quantumaccess.data.local.SecurePrefsManager(context)
+            
+            BiometricSetupScreen(
+                onEnable = {
+                    prefs.setBiometricEnabled(true)
+                    navController.navigate(Routes.LocationVerification) {
+                        popUpTo(Routes.Register) { inclusive = true }
+                        popUpTo(Routes.BiometricSetup) { inclusive = true }
+                    }
+                },
+                onSkip = {
+                    prefs.setBiometricEnabled(false)
+                    navController.navigate(Routes.LocationVerification) {
+                         popUpTo(Routes.Register) { inclusive = true }
+                         popUpTo(Routes.BiometricSetup) { inclusive = true }
+                    }
+                }
+            )
+        }
 		composable(Routes.BiometricLogin) {
+            val context = LocalContext.current
+            val prefs = com.example.quantumaccess.data.local.SecurePrefsManager(context)
+            val isBiometricEnabled = prefs.isBiometricEnabled()
+            
 			BiometricLoginScreen(
 				onAuthenticate = {
+                    // Success -> Dashboard
 					navController.navigate(Routes.LocationVerification) {
 						popUpTo(Routes.BiometricLogin) { inclusive = true }
 					}
-				}
+				},
+                onLoginWithPassword = { _, _ ->
+                     // Login success -> Check if biometric enabled
+                     if (isBiometricEnabled) {
+                         navController.navigate(Routes.LocationVerification) {
+                            popUpTo(Routes.BiometricLogin) { inclusive = true }
+                         }
+                     } else {
+                         // If not enabled, offer setup
+                         navController.navigate(Routes.BiometricSetup)
+                     }
+                }
 			)
 		}
 		composable(Routes.LocationVerification) {
@@ -242,5 +306,3 @@ private fun generateQuantumId(): String {
 	}
 	return "#QTX-${segment(4)}-${segment(4)}"
 }
-
-

@@ -57,8 +57,10 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.biometric)
     implementation(libs.play.services.location)
+    implementation(libs.play.services.auth)
     implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.coroutines.android)
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
     implementation(libs.security.crypto)
     implementation(libs.javax.inject)
 
