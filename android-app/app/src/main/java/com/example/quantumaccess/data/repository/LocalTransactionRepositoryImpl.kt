@@ -24,17 +24,23 @@ class LocalTransactionRepositoryImpl @Inject constructor(
     private val transactionDao: TransactionDao
 ) : TransactionRepository {
 
-    // Flow expus conform cerințelor (chiar dacă nu e în interfața originală Domain)
-    fun getTransactionsFlow(): Flow<List<TransactionHistoryEntry>> {
+    override fun observeTransactionHistory(): Flow<List<TransactionHistoryEntry>> {
         return transactionDao.getAllFlow().map { entities ->
             entities.map { it.toDomainModel() }
         }
     }
 
-    override suspend fun insertTransaction(amount: Double, mode: String, status: String, intercepted: Boolean) {
+    override suspend fun insertTransaction(
+        amount: Double,
+        mode: String,
+        status: String,
+        intercepted: Boolean,
+        beneficiary: String
+    ) {
         val entity = LocalTransactionEntity(
             transactionId = UUID.randomUUID(),
             amount = amount,
+            beneficiary = beneficiary,
             mode = mode,
             status = status,
             intercepted = intercepted,

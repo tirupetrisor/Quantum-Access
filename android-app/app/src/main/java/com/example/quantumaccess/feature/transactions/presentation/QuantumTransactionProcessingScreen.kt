@@ -101,7 +101,8 @@ fun QuantumTransactionProcessingScreen(
                         amount = cleanAmount,
                         mode = "QUANTUM",
                         status = "COMPLETED",
-                        intercepted = false // Quantum is secure by definition (in this demo context)
+                        intercepted = false, // Quantum is secure by definition (in this demo context)
+                        beneficiary = beneficiary
                     )
                     transactionSaved = true
                 }

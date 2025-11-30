@@ -25,7 +25,7 @@ import com.example.quantumaccess.data.local.entities.SessionEntity
         LocalTransactionEntity::class,
         AnalyticsEntity::class
     ],
-    version = 1,
+    version = 3,
     exportSchema = true
 )
 @TypeConverters(com.example.quantumaccess.data.local.TypeConverters::class)
@@ -47,6 +47,7 @@ abstract class QuantumAccessDatabase : RoomDatabase() {
                     QuantumAccessDatabase::class.java,
                     "quantum_access_db"
                 )
+                .fallbackToDestructiveMigration()
                 // .addCallback(RoomCallback()) // Optional: prepopulate
                 .build()
                 INSTANCE = instance

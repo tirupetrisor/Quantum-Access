@@ -3,8 +3,10 @@ package com.example.quantumaccess.domain.model
 data class TransactionHistoryEntry(
     val id: Int,
     val title: String,
+    val beneficiary: String,
     val dateTime: String,
     val amountFormatted: String,
+    val amountValue: Double,
     val direction: TransactionDirection,
     val channel: TransactionChannel,
     val statusMessage: String,

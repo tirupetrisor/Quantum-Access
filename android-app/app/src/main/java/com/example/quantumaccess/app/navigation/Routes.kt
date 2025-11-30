@@ -3,6 +3,7 @@ package com.example.quantumaccess.app.navigation
 object Routes {
     const val Splash = "splash"
     const val Register = "register"
+    const val BiometricSetup = "biometric_setup"
 	const val BiometricLogin = "biometric_login"
 	const val LocationVerification = "location_verification"
 	const val Dashboard = "dashboard"
