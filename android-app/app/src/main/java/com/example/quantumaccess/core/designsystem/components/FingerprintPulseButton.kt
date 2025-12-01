@@ -85,7 +85,11 @@ fun FingerprintPulseButton(
                     ),
                     shape = CircleShape
                 )
-                .clickable(onClick = onClick),
+                .clickable(
+                    onClick = onClick,
+                    interactionSource = androidx.compose.foundation.interaction.MutableInteractionSource(),
+                    indication = androidx.compose.material3.ripple(bounded = true, radius = 50.dp, color = Color.White)
+                ),
             contentAlignment = Alignment.Center
         ) {
             Icon(

@@ -48,7 +48,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -117,19 +117,13 @@ fun RegisterScreen(
     
     // Force status bar icons to be dark (visible on white background) for this screen
     val view = LocalView.current
-    val darkTheme = isSystemInDarkTheme()
     if (!view.isInEditMode) {
-        DisposableEffect(Unit) {
+        SideEffect {
             val window = (view.context as Activity).window
             val controller = WindowCompat.getInsetsController(window, view)
             
             // Set to true (dark icons) for this screen
             controller.isAppearanceLightStatusBars = true
-            
-            onDispose {
-                // Revert to system default (dark theme -> light icons, light theme -> dark icons)
-                controller.isAppearanceLightStatusBars = !darkTheme
-            }
         }
     }
     

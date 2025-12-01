@@ -2,8 +2,11 @@ package com.example.quantumaccess.feature.auth.presentation
 
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
+import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -19,17 +23,20 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import androidx.fragment.app.FragmentActivity
 import com.example.quantumaccess.core.designsystem.components.FingerprintPulseButton
 import com.example.quantumaccess.core.designsystem.components.PrimaryActionButton
@@ -47,13 +54,24 @@ fun BiometricSetupScreen(
     val executor = remember { ContextCompat.getMainExecutor(context) }
     val biometricManager = remember { BiometricManager.from(context) }
     val activity = remember { context.findFragmentActivity() }
+
+    // Force status bar icons to be dark (visible on white background) for this screen
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as Activity).window
+            val controller = WindowCompat.getInsetsController(window, view)
+            // Set to true (dark icons) for this screen
+            controller.isAppearanceLightStatusBars = true
+        }
+    }
     
     // Function to actually trigger system enrollment prompt or just verify and enable
     fun enableBiometric() {
         val allowed = BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
         val canAuth = biometricManager.canAuthenticate(allowed)
         
-        if (canAuth == BiometricManager.BIOMETRIC_SUCCESS && activity != null) {
+        if (activity != null) {
              // Verify user identity before enabling
              val prompt = BiometricPrompt(
                 activity,
@@ -83,6 +101,8 @@ fun BiometricSetupScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
+            .background(Color.White)
+            .systemBarsPadding()
             .verticalScroll(rememberScrollState())
             .padding(24.dp),
         contentAlignment = Alignment.Center

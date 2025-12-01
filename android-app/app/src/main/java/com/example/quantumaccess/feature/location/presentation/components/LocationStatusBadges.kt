@@ -44,13 +44,6 @@ fun StatusBadgeAuthorized(modifier: Modifier = Modifier) {
 					.background(SecureGreen, CircleShape)
 			)
 			Spacer(modifier = Modifier.size(8.dp))
-			Icon(
-				imageVector = Icons.Filled.CheckCircle,
-				contentDescription = null,
-				tint = SecureGreen,
-				modifier = Modifier.size(16.dp)
-			)
-			Spacer(modifier = Modifier.size(8.dp))
 			Text(text = "Authorized Access", color = DeepBlue, fontSize = 14.sp)
 		}
 	}
@@ -76,13 +69,6 @@ fun StatusBadgeUnauthorized(modifier: Modifier = Modifier) {
 					.background(Color(0xFFD32F2F), CircleShape)
 			)
 			Spacer(modifier = Modifier.size(8.dp))
-			Icon(
-				imageVector = Icons.Filled.LocationOn,
-				contentDescription = null,
-				tint = Color(0xFFD32F2F),
-				modifier = Modifier.size(16.dp)
-			)
-			Spacer(modifier = Modifier.size(8.dp))
 			Text(text = "Unauthorized Area", color = DeepBlue, fontSize = 14.sp)
 		}
 	}
@@ -106,13 +92,6 @@ fun StatusBadgeUnknown(modifier: Modifier = Modifier) {
 				modifier = Modifier
 					.size(10.dp)
 					.background(Color(0xFF9E9E9E), CircleShape)
-			)
-			Spacer(modifier = Modifier.size(8.dp))
-			Icon(
-				imageVector = Icons.Filled.LocationOn,
-				contentDescription = null,
-				tint = Color(0xFF9E9E9E),
-				modifier = Modifier.size(16.dp)
 			)
 			Spacer(modifier = Modifier.size(8.dp))
 			Text(text = "Awaiting Verification", color = DeepBlue, fontSize = 14.sp)
