@@ -50,6 +50,16 @@ import com.example.quantumaccess.core.designsystem.theme.Slate800
 import com.example.quantumaccess.core.designsystem.theme.Steel200
 import com.example.quantumaccess.core.designsystem.theme.Steel300
 
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
+import android.app.Activity
+import com.example.quantumaccess.core.util.findActivity
+
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+
 @Composable
 fun DashboardScreen(
 	modifier: Modifier = Modifier,
@@ -58,14 +68,28 @@ fun DashboardScreen(
 	onOpenAnalytics: () -> Unit = {},
 	onLogoutConfirm: () -> Unit = {}
 ) {
+    // Force status bar icons to be light (visible on blue background)
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = view.context.findActivity()?.window
+            if (window != null) {
+                val controller = WindowCompat.getInsetsController(window, view)
+                controller.isAppearanceLightStatusBars = false
+            }
+        }
+    }
+
 	Box(
 		modifier = modifier
 			.fillMaxSize()
 			.background(Color.White)
+            .navigationBarsPadding() // Respect system navigation bar
 	) {
 		Column(
 			modifier = Modifier
 				.fillMaxSize()
+                // .verticalScroll(rememberScrollState()) REMOVED: Scroll is now handled inside the middle column
 		) {
 			QuantumTopBar(
 				title = "QuantumAccess",
@@ -73,11 +97,12 @@ fun DashboardScreen(
 				showLogoutButton = true,
 				onLogoutClick = onLogoutConfirm
 			)
-			Spacer(modifier = Modifier.height(16.dp))
 			Column(
 				modifier = Modifier
 					.padding(horizontal = 20.dp)
-					.weight(1f),
+                    .weight(1f) // Allow this column to take up remaining space
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()), // Scroll internally if needed
 				verticalArrangement = Arrangement.Center
 			) {
 				DashboardCard(
@@ -116,6 +141,8 @@ fun DashboardScreen(
 					borderColor = BorderLight
 				)
 			}
+            
+            // Spacer removed as weight(1f) in middle column handles spacing
 			Footer()
 		}
 	}
@@ -222,5 +249,3 @@ private fun DashboardPreview() {
 		}
 	}
 }
-
-

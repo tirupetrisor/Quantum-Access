@@ -43,6 +43,8 @@ import com.example.quantumaccess.core.designsystem.components.PrimaryActionButto
 import com.example.quantumaccess.core.designsystem.components.QuantumLogo
 import com.example.quantumaccess.core.designsystem.theme.DeepBlue
 import com.example.quantumaccess.core.designsystem.theme.NightBlack
+import com.example.quantumaccess.core.util.findActivity
+import com.example.quantumaccess.core.util.findFragmentActivity
 
 @Composable
 fun BiometricSetupScreen(
@@ -59,10 +61,12 @@ fun BiometricSetupScreen(
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
-            val window = (view.context as Activity).window
-            val controller = WindowCompat.getInsetsController(window, view)
-            // Set to true (dark icons) for this screen
-            controller.isAppearanceLightStatusBars = true
+            val window = context.findActivity()?.window
+            if (window != null) {
+                val controller = WindowCompat.getInsetsController(window, view)
+                // Set to true (dark icons) for this screen
+                controller.isAppearanceLightStatusBars = true
+            }
         }
     }
     
@@ -168,15 +172,6 @@ fun BiometricSetupScreen(
             }
         }
     }
-}
-
-private fun Context.findFragmentActivity(): FragmentActivity? {
-    var current: Context? = this
-    while (current is ContextWrapper) {
-        if (current is FragmentActivity) return current
-        current = current.baseContext
-    }
-    return null
 }
 
 @Preview(showBackground = true)

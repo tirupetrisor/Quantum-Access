@@ -73,6 +73,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.core.view.WindowCompat
 import androidx.compose.ui.platform.LocalView
 import android.app.Activity
+import com.example.quantumaccess.core.util.findActivity
 
 @Composable
 fun LocationVerificationScreen(
@@ -91,10 +92,12 @@ fun LocationVerificationScreen(
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
-            val window = (view.context as Activity).window
-            val controller = WindowCompat.getInsetsController(window, view)
-            // Set to true (dark icons) for this screen
-            controller.isAppearanceLightStatusBars = true
+            val window = context.findActivity()?.window
+            if (window != null) {
+                val controller = WindowCompat.getInsetsController(window, view)
+                // Set to true (dark icons) for this screen
+                controller.isAppearanceLightStatusBars = true
+            }
         }
     }
 

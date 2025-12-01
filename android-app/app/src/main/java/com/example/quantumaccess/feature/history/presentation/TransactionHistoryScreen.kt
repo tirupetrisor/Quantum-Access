@@ -81,6 +81,14 @@ import com.example.quantumaccess.domain.model.TransactionSecurityState
 import com.example.quantumaccess.domain.repository.TransactionRepository
 import kotlinx.coroutines.launch
 
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
+import android.app.Activity
+import com.example.quantumaccess.core.util.findActivity
+
+import androidx.compose.foundation.layout.navigationBarsPadding
+
 @Composable
 fun TransactionHistoryScreen(
 	modifier: Modifier = Modifier,
@@ -89,6 +97,18 @@ fun TransactionHistoryScreen(
 	onLogout: () -> Unit = {},
 	transactionRepository: TransactionRepository = RepositoryProvider.transactionRepository
 ) {
+    // Force status bar icons to be light (visible on blue background)
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = view.context.findActivity()?.window
+            if (window != null) {
+                val controller = WindowCompat.getInsetsController(window, view)
+                controller.isAppearanceLightStatusBars = false
+            }
+        }
+    }
+
 	val coroutineScope = rememberCoroutineScope()
 	val transactions by transactionRepository
 		.observeTransactionHistory()
@@ -133,6 +153,7 @@ fun TransactionHistoryScreen(
 		modifier = modifier
 			.fillMaxSize()
 			.background(ScreenBackground)
+            .navigationBarsPadding() // Ensure content doesn't overlap with nav bar
 	) {
 		Column(modifier = Modifier.fillMaxSize()) {
 			QuantumTopBar(
@@ -510,4 +531,3 @@ private fun TransactionHistoryPreview() {
 		TransactionHistoryScreen()
 	}
 }
-

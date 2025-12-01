@@ -56,6 +56,12 @@ import com.example.quantumaccess.domain.model.QuantumProcessStep
 import com.example.quantumaccess.domain.repository.TransactionRepository
 import kotlinx.coroutines.delay
 
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
+import com.example.quantumaccess.core.util.findActivity
+
 @Composable
 fun QuantumTransactionProcessingScreen(
     modifier: Modifier = Modifier,
@@ -66,6 +72,18 @@ fun QuantumTransactionProcessingScreen(
     onLogout: () -> Unit = {},
     transactionRepository: TransactionRepository = RepositoryProvider.transactionRepository
 ) {
+    // Force status bar icons to be light
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = view.context.findActivity()?.window
+            if (window != null) {
+                val controller = WindowCompat.getInsetsController(window, view)
+                controller.isAppearanceLightStatusBars = false
+            }
+        }
+    }
+
     val steps = remember(transactionRepository) { transactionRepository.getQuantumProcessSteps() }.takeIf { it.isNotEmpty() }
         ?: listOf(
             QuantumProcessStep(
@@ -123,6 +141,7 @@ fun QuantumTransactionProcessingScreen(
                     colors = listOf(Color(0xFF0E1549), Color(0xFF1A237E))
                 )
             )
+            .navigationBarsPadding()
     ) {
         Column(
             modifier = Modifier

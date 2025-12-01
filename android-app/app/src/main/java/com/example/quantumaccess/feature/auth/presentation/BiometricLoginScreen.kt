@@ -46,6 +46,7 @@ import com.example.quantumaccess.core.designsystem.components.FingerprintPulseBu
 import com.example.quantumaccess.core.designsystem.components.GoogleSignInButton
 import com.example.quantumaccess.core.designsystem.components.InputField
 import com.example.quantumaccess.core.designsystem.components.PrimaryActionButton
+import com.example.quantumaccess.core.util.findFragmentActivity
 import com.example.quantumaccess.data.local.SecurePrefsManager
 import com.example.quantumaccess.core.designsystem.components.QuantumLogo
 import com.example.quantumaccess.core.designsystem.theme.BorderSubtle
@@ -101,15 +102,6 @@ fun BiometricLoginScreen(
 			.build()
 		prompt.authenticate(promptInfo)
 	}
-
-    // Auto launch biometric if enabled and supported
-    LaunchedEffect(Unit) {
-        val allowed = BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
-        val canAuth = biometricManager.canAuthenticate(allowed)
-        if (prefs.isBiometricEnabled() && canAuth == BiometricManager.BIOMETRIC_SUCCESS) {
-            launchBiometric()
-        }
-    }
 
 	Box(
 		modifier = modifier
@@ -230,15 +222,6 @@ fun BiometricLoginScreen(
             }
         }
 	}
-}
-
-private fun Context.findFragmentActivity(): FragmentActivity? {
-	var current: Context? = this
-	while (current is ContextWrapper) {
-		if (current is FragmentActivity) return current
-		current = current.baseContext
-	}
-	return null
 }
 
 @Preview(showBackground = true, showSystemUi = true)
