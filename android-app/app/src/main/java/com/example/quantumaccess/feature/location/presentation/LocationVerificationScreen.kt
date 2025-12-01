@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.LocationOn
@@ -66,6 +68,12 @@ import com.example.quantumaccess.feature.location.presentation.components.Status
 import kotlinx.coroutines.launch
 import java.util.Locale
 
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.runtime.SideEffect
+import androidx.core.view.WindowCompat
+import androidx.compose.ui.platform.LocalView
+import android.app.Activity
+
 @Composable
 fun LocationVerificationScreen(
 	modifier: Modifier = Modifier,
@@ -78,6 +86,17 @@ fun LocationVerificationScreen(
 	var distanceMeters by remember { mutableStateOf<Double?>(null) }
 	var showManual by remember { mutableStateOf(false) }
 	val scope = rememberCoroutineScope()
+
+    // Force status bar icons to be dark (visible on white background) for this screen
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as Activity).window
+            val controller = WindowCompat.getInsetsController(window, view)
+            // Set to true (dark icons) for this screen
+            controller.isAppearanceLightStatusBars = true
+        }
+    }
 
 	val permissionGranted = remember {
 		ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
@@ -105,22 +124,30 @@ fun LocationVerificationScreen(
 	Box(
 		modifier = modifier
 			.fillMaxSize()
-			.padding(horizontal = 24.dp, vertical = 16.dp)
+			.background(Color.White)
+            .systemBarsPadding()
+			.padding(horizontal = 24.dp)
 			.widthIn(max = 480.dp),
-		contentAlignment = Alignment.Center
+		contentAlignment = Alignment.TopCenter
 	) {
-		// Header-like logo at the top-left
-		QuantumLogo(
-			iconSize = 32.dp,
-			showText = true,
-			modifier = Modifier
-				.align(Alignment.TopStart)
-				.padding(top = 35.dp)
-		)
+		Column(
+            horizontalAlignment = Alignment.CenterHorizontally, 
+            modifier = Modifier
+                .verticalScroll(rememberScrollState())
+                .padding(vertical = 24.dp)
+        ) {
+            // Header-like logo at the top
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 12.dp),
+                horizontalArrangement = Arrangement.Start
+            ) {
+                QuantumLogo(
+                    iconSize = 32.dp,
+                    showText = true
+                )
+            }
 
-		// Place the content slightly below exact center
-		Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(top = 24.dp)) {
-			Spacer(modifier = Modifier.height(25.dp))
+			Spacer(modifier = Modifier.height(12.dp))
 
 			Row(
 				modifier = Modifier.fillMaxWidth(),
@@ -149,7 +176,7 @@ fun LocationVerificationScreen(
 						authorized = authorized,
 						modifier = Modifier
 						.fillMaxWidth()
-						.height(300.dp)
+						.height(220.dp) // Reduced height for better fit
 						.clip(RoundedCornerShape(16.dp))
 						.background(Color(0xFFF8FAFC))
 					)

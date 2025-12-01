@@ -74,8 +74,9 @@ fun BiometricLoginScreen(
 		val allowed = BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
 		val canAuth = biometricManager.canAuthenticate(allowed)
 		
-		if (!prefs.isBiometricEnabled() || canAuth != BiometricManager.BIOMETRIC_SUCCESS || activity == null) {
-            // If biometric is not set up or failed, allow manual login (do not auto-authenticate)
+        // Removed early return check for 'canAuth != SUCCESS' to allow system prompt to handle edge cases/setup if possible, 
+        // or just to let 'authenticate' fail with error callback if something is wrong, providing better feedback.
+		if (activity == null) {
 			return
 		}
 		val prompt = BiometricPrompt(
@@ -86,7 +87,7 @@ fun BiometricLoginScreen(
 					onAuthenticate()
 				}
 				override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-					// do nothing; user can retry
+                    // Handle error
 				}
 				override fun onAuthenticationFailed() {
 					// do nothing; user can retry
