@@ -75,9 +75,7 @@ fun BiometricLoginScreen(
 		val canAuth = biometricManager.canAuthenticate(allowed)
 		
 		if (!prefs.isBiometricEnabled() || canAuth != BiometricManager.BIOMETRIC_SUCCESS || activity == null) {
-            // If biometric is not set up or failed, we should probably prompt setup or fallback
-            // For this flow, if clicked and not enabled, just call success for demo or show message
-			onAuthenticate()
+            // If biometric is not set up or failed, allow manual login (do not auto-authenticate)
 			return
 		}
 		val prompt = BiometricPrompt(

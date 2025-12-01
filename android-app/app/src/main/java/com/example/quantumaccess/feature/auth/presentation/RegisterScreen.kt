@@ -7,6 +7,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,8 +16,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
@@ -45,6 +48,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -57,6 +61,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -65,6 +70,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.core.view.WindowCompat
 import com.example.quantumaccess.core.designsystem.components.GoogleSignInButton
 import com.example.quantumaccess.core.designsystem.components.InputField
 import com.example.quantumaccess.core.designsystem.components.PrimaryActionButton
@@ -109,6 +115,24 @@ fun RegisterScreen(
         )
     }
     
+    // Force status bar icons to be dark (visible on white background) for this screen
+    val view = LocalView.current
+    val darkTheme = isSystemInDarkTheme()
+    if (!view.isInEditMode) {
+        DisposableEffect(Unit) {
+            val window = (view.context as Activity).window
+            val controller = WindowCompat.getInsetsController(window, view)
+            
+            // Set to true (dark icons) for this screen
+            controller.isAppearanceLightStatusBars = true
+            
+            onDispose {
+                // Revert to system default (dark theme -> light icons, light theme -> dark icons)
+                controller.isAppearanceLightStatusBars = !darkTheme
+            }
+        }
+    }
+    
     val coroutineScope = rememberCoroutineScope()
     var isGoogleLoading by remember { mutableStateOf(false) }
 
@@ -143,27 +167,30 @@ fun RegisterScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
+            .background(Color.White)
+            .systemBarsPadding() // Respect system bars (status bar, navigation bar)
+            .imePadding() // Move up when keyboard opens
             .verticalScroll(rememberScrollState())
     ) {
         Column(
             modifier = Modifier
                 .align(Alignment.Center)
-                .padding(horizontal = 24.dp, vertical = 24.dp)
+                .padding(horizontal = 24.dp, vertical = 16.dp)
                 .fillMaxWidth()
                 .widthIn(max = 420.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                QuantumLogo(iconSize = 40.dp, showText = true)
+                QuantumLogo(iconSize = 32.dp, showText = true)
             }
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = "Create Your Account",
-                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold, fontSize = 22.sp),
                 color = NightBlack,
                 textAlign = TextAlign.Center
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             GoogleSignInButton(
                 onClick = { 
@@ -184,7 +211,7 @@ fun RegisterScreen(
                 modifier = Modifier.fillMaxWidth()
             )
             
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -200,86 +227,60 @@ fun RegisterScreen(
                 Divider(modifier = Modifier.weight(1f), color = BorderSubtle)
             }
             
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             
             if (uiState.generalError != null) {
                 Text(
                     text = uiState.generalError,
                     color = AlertRed,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(bottom = 16.dp)
+                    modifier = Modifier.padding(bottom = 8.dp)
                 )
             }
 
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                shadowElevation = 6.dp,
-                color = Color.White
+            // Removed Surface/Card to save space and fit everything on screen
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Column(
-                    modifier = Modifier
-                        .border(
-                            width = 1.dp,
-                            color = BorderSubtle,
-                            shape = RoundedCornerShape(16.dp)
-                        )
-                        .padding(16.dp)
-                ) {
-                    InputField(
-                        value = fullName,
-                        onValueChange = { fullName = it },
-                        label = "Full Name",
-                        placeholder = "Enter your full name",
-                        labelIcon = Icons.Filled.Person
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    if (nameError != null) {
-                        ErrorMessage(nameError!!)
-                    }
+                InputField(
+                    value = fullName,
+                    onValueChange = { fullName = it },
+                    label = "Full Name",
+                    placeholder = "Enter your full name",
+                    labelIcon = Icons.Filled.Person
+                )
+                if (nameError != null) ErrorMessage(nameError!!)
 
-                    InputField(
-                        value = email,
-                        onValueChange = { email = it },
-                        label = "Email",
-                        placeholder = "Enter your email",
-                        labelIcon = Icons.Filled.Email
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    // Show either local or server-side email error
-                    val displayEmailError = emailLocalError ?: uiState.emailError
-                    if (displayEmailError != null) {
-                        ErrorMessage(displayEmailError)
-                    }
+                InputField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = "Email",
+                    placeholder = "Enter your email",
+                    labelIcon = Icons.Filled.Email
+                )
+                val displayEmailError = emailLocalError ?: uiState.emailError
+                if (displayEmailError != null) ErrorMessage(displayEmailError)
 
-                    InputField(
-                        value = username,
-                        onValueChange = { username = it },
-                        label = "Username",
-                        placeholder = "Choose a username",
-                        labelIcon = Icons.Filled.AlternateEmail
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    // Show either local or server-side username error
-                    val displayUsernameError = usernameLocalError ?: uiState.usernameError
-                    if (displayUsernameError != null) {
-                        ErrorMessage(displayUsernameError)
-                    }
+                InputField(
+                    value = username,
+                    onValueChange = { username = it },
+                    label = "Username",
+                    placeholder = "Choose a username",
+                    labelIcon = Icons.Filled.AlternateEmail
+                )
+                val displayUsernameError = usernameLocalError ?: uiState.usernameError
+                if (displayUsernameError != null) ErrorMessage(displayUsernameError)
 
-                    InputField(
-                        value = password,
-                        onValueChange = { password = it },
-                        label = "Password",
-                        placeholder = "Create a secure password",
-                        labelIcon = Icons.Filled.Lock,
-                        isPassword = true
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    if (passwordError != null) {
-                        ErrorMessage(passwordError!!)
-                    }
-                }
+                InputField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = "Password",
+                    placeholder = "Create a secure password",
+                    labelIcon = Icons.Filled.Lock,
+                    isPassword = true
+                )
+                if (passwordError != null) ErrorMessage(passwordError!!)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -296,7 +297,6 @@ fun RegisterScreen(
 
                         val valid = listOf(nameError, emailLocalError, usernameLocalError, passwordError).all { it == null }
                         if (valid) {
-                            // Pass false for biometricEnabled to delegate setup to the next screen
                             onRegister(fullName, username, email, password, false)
                         }
                     }
@@ -304,7 +304,7 @@ fun RegisterScreen(
                 modifier = Modifier.fillMaxWidth()
             )
             
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = "Already have an account? Log in",
                 color = DeepBlue,
