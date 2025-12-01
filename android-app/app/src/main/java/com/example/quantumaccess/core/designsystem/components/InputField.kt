@@ -101,7 +101,9 @@ fun InputField(
                     unfocusedBorderColor = Color(0xFFE0E0E0),
                     focusedContainerColor = Color.White,
                     unfocusedContainerColor = Color.White,
-                    cursorColor = DeepBlue
+                    cursorColor = DeepBlue,
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black
                 )
             )
         }

@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.quantumaccess.core.designsystem.theme.DeepBlue
 
 @Composable
 fun GoogleSignInButton(
@@ -29,18 +30,18 @@ fun GoogleSignInButton(
         enabled = enabled && !loading,
         shape = RoundedCornerShape(8.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = Color.White,
-            contentColor = Color.Black,
-            disabledContainerColor = Color.White.copy(alpha = 0.7f),
-            disabledContentColor = Color.Black.copy(alpha = 0.4f)
-        ),
-        border = BorderStroke(1.dp, Color.LightGray)
+            containerColor = DeepBlue,
+            contentColor = Color.White,
+            disabledContainerColor = DeepBlue.copy(alpha = 0.7f),
+            disabledContentColor = Color.White.copy(alpha = 0.4f)
+        )
+        // Border removed as requested to match other buttons style
     ) {
         if (loading) {
             androidx.compose.material3.CircularProgressIndicator(
                 modifier = Modifier.size(20.dp),
                 strokeWidth = 2.dp,
-                color = Color.Gray
+                color = Color.White
             )
             androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(12.dp))
             Text(
