@@ -14,6 +14,7 @@ data class LocalTransactionEntity(
     @PrimaryKey
     val transactionId: UUID,
     val amount: Double,
+    val beneficiary: String,
     val mode: String, // e.g., "QUANTUM", "NORMAL"
     val status: String, // e.g., "COMPLETED", "PENDING"
     val intercepted: Boolean,

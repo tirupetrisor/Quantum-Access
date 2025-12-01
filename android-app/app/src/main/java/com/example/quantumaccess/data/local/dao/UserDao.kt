@@ -31,4 +31,7 @@ interface UserDao {
     
     @Query("SELECT * FROM local_users WHERE username = :username LIMIT 1")
     suspend fun getByUsername(username: String): LocalUserEntity?
+
+    @Query("SELECT * FROM local_users WHERE email = :email LIMIT 1")
+    suspend fun getByEmail(email: String): LocalUserEntity?
 }

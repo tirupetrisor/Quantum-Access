@@ -99,7 +99,8 @@ fun NormalTransactionProcessingScreen(
                 amount = cleanAmount,
                 mode = "NORMAL",
                 status = "COMPLETED",
-                intercepted = false // Server will update this status if interception occurred
+                intercepted = false, // Server will update this status if interception occurred
+                beneficiary = beneficiary
             )
             transactionSaved = true
         }
