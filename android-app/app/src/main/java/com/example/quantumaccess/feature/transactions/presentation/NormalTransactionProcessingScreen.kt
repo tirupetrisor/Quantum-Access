@@ -67,6 +67,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
 
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
+import com.example.quantumaccess.core.util.findActivity
+
 private const val PROCESS_DURATION_MS = 4500
 
 @Composable
@@ -78,6 +84,18 @@ fun NormalTransactionProcessingScreen(
     onLogout: () -> Unit = {},
     transactionRepository: TransactionRepository = RepositoryProvider.transactionRepository
 ) {
+    // Force status bar icons to be light
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = view.context.findActivity()?.window
+            if (window != null) {
+                val controller = WindowCompat.getInsetsController(window, view)
+                controller.isAppearanceLightStatusBars = false
+            }
+        }
+    }
+
     var isProcessing by remember { mutableStateOf(true) }
     var transactionSaved by remember { mutableStateOf(false) } // Prevent duplicates
     val progress = remember { Animatable(0f) }
@@ -113,6 +131,7 @@ fun NormalTransactionProcessingScreen(
         modifier = modifier
             .fillMaxSize()
             .background(Color.White)
+            .navigationBarsPadding()
     ) {
         Column(
             modifier = Modifier.fillMaxSize()

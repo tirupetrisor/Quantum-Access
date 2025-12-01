@@ -80,6 +80,7 @@ import com.example.quantumaccess.core.designsystem.theme.BorderSubtle
 import com.example.quantumaccess.core.designsystem.theme.DeepBlue
 import com.example.quantumaccess.core.designsystem.theme.ForestGreen
 import com.example.quantumaccess.core.designsystem.theme.NightBlack
+import com.example.quantumaccess.core.util.findActivity
 import com.example.quantumaccess.feature.auth.data.GoogleAuthClient
 import com.example.quantumaccess.viewmodel.RegisterUiState
 import com.google.android.gms.auth.api.identity.Identity
@@ -119,11 +120,12 @@ fun RegisterScreen(
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
-            val window = (view.context as Activity).window
-            val controller = WindowCompat.getInsetsController(window, view)
-            
-            // Set to true (dark icons) for this screen
-            controller.isAppearanceLightStatusBars = true
+            val window = context.findActivity()?.window
+            if (window != null) {
+                val controller = WindowCompat.getInsetsController(window, view)
+                // Set to true (dark icons) for this screen
+                controller.isAppearanceLightStatusBars = true
+            }
         }
     }
     

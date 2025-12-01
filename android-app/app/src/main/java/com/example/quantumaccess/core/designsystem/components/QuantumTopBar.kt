@@ -49,9 +49,9 @@ fun QuantumTopBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .statusBarsPadding()
             .background(backgroundColor)
-            .padding(horizontal = 16.dp, vertical = 14.dp)
+            .statusBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 10.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

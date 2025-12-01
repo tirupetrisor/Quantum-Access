@@ -57,6 +57,14 @@ import com.example.quantumaccess.domain.model.TransactionAnalyticsSlice
 import com.example.quantumaccess.domain.repository.TransactionRepository
 import java.util.Locale
 
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
+import android.app.Activity
+import com.example.quantumaccess.core.util.findActivity
+
+import androidx.compose.foundation.layout.navigationBarsPadding
+
 @Composable
 fun AnalyticsDashboardScreen(
 	modifier: Modifier = Modifier,
@@ -64,6 +72,18 @@ fun AnalyticsDashboardScreen(
 	onLogout: () -> Unit = {},
 	transactionRepository: TransactionRepository = RepositoryProvider.transactionRepository
 ) {
+    // Force status bar icons to be light (visible on blue background)
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = view.context.findActivity()?.window
+            if (window != null) {
+                val controller = WindowCompat.getInsetsController(window, view)
+                controller.isAppearanceLightStatusBars = false
+            }
+        }
+    }
+
 	val slices = remember(transactionRepository) { transactionRepository.getSecurityDistribution() }
 	val uiSlices = remember(slices) { slices.map { it.toUiSlice() } }
 
@@ -71,6 +91,7 @@ fun AnalyticsDashboardScreen(
 		modifier = modifier
 			.fillMaxSize()
 			.background(Cloud100)
+            .navigationBarsPadding() // Add padding for navigation bar
 	) {
 		Column(modifier = Modifier.fillMaxSize()) {
 			QuantumTopBar(
@@ -271,4 +292,3 @@ private fun AnalyticsDashboardPreview() {
 		AnalyticsDashboardScreen()
 	}
 }
-

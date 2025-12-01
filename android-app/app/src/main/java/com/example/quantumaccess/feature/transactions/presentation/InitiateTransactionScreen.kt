@@ -46,6 +46,14 @@ import com.example.quantumaccess.core.designsystem.theme.NightBlack
 import com.example.quantumaccess.core.designsystem.theme.OutlineGray
 import com.example.quantumaccess.core.designsystem.theme.Slate800
 
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
+import com.example.quantumaccess.core.util.findActivity
+
 enum class TransactionMode { NORMAL, QUANTUM }
 
 @Composable
@@ -57,10 +65,23 @@ fun InitiateTransactionScreen(
 	var beneficiary by remember { mutableStateOf("") }
 	var selectedMode by remember { mutableStateOf(TransactionMode.QUANTUM) }
 
+    // Force status bar icons to be light (visible on blue background)
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = view.context.findActivity()?.window
+            if (window != null) {
+                val controller = WindowCompat.getInsetsController(window, view)
+                controller.isAppearanceLightStatusBars = false
+            }
+        }
+    }
+
 	Column(
 		modifier = modifier
 			.fillMaxSize()
 			.background(Color.White)
+            .navigationBarsPadding()
 	) {
 		QuantumTopBar(
 			title = "QuantumAccess",
@@ -70,7 +91,8 @@ fun InitiateTransactionScreen(
 		Column(
 			modifier = Modifier
 				.padding(horizontal = 16.dp, vertical = 12.dp)
-				.fillMaxSize(),
+				.fillMaxSize()
+                .verticalScroll(rememberScrollState()), // Allow scrolling
 			verticalArrangement = Arrangement.SpaceBetween
 		) {
 			Box(
@@ -240,5 +262,3 @@ private fun ModeCard(
 private fun PreviewInitiate() {
 	InitiateTransactionScreen()
 }
-
-
