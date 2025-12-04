@@ -22,10 +22,15 @@ interface TransactionDao {
     @Query("SELECT * FROM local_transactions ORDER BY createdAt DESC")
     fun getAllFlow(): Flow<List<LocalTransactionEntity>>
 
+    @Query("SELECT * FROM local_transactions WHERE userId = :userId ORDER BY createdAt DESC")
+    fun getTransactions(userId: UUID): Flow<List<LocalTransactionEntity>>
+
     @Query("SELECT * FROM local_transactions WHERE transactionId = :id")
     suspend fun getById(id: UUID): LocalTransactionEntity?
 
     @Query("DELETE FROM local_transactions")
     suspend fun deleteAll()
-}
 
+    @Query("DELETE FROM local_transactions WHERE userId = :userId")
+    suspend fun clearUserData(userId: UUID)
+}

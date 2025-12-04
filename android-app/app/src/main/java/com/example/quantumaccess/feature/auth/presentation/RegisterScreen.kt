@@ -92,7 +92,7 @@ fun RegisterScreen(
     modifier: Modifier = Modifier,
     uiState: RegisterUiState = RegisterUiState(),
     onRegister: (fullName: String, username: String, email: String, password: String, enableBiometric: Boolean) -> Unit = { _, _, _, _, _ -> },
-    onGoogleSignInSuccess: (email: String, name: String, googleId: String, biometricEnabled: Boolean) -> Unit = { _, _, _, _ -> },
+    onGoogleSignInSuccess: (email: String, name: String, googleId: String, biometricEnabled: Boolean, idToken: String?) -> Unit = { _, _, _, _, _ -> },
     onLoginLink: () -> Unit = {},
     onClearErrors: () -> Unit = {}
 ) {
@@ -140,7 +140,7 @@ fun RegisterScreen(
                     val signInResult = googleAuthClient.signInWithIntent(result.data ?: return@launch)
                     val data = signInResult.data
                     if (data != null) {
-                        onGoogleSignInSuccess(data.email, data.username, data.userId, false)
+                        onGoogleSignInSuccess(data.email, data.username, data.userId, false, data.idToken)
                         isGoogleLoading = false
                     } else {
                          // Handle error or show toast (ideally pass error callback)

@@ -9,6 +9,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -74,6 +75,7 @@ import androidx.core.view.WindowCompat
 import com.example.quantumaccess.core.util.findActivity
 
 private const val PROCESS_DURATION_MS = 4500
+private const val NORMAL_TRANSACTION_TAG = "NormalTransactionScreen"
 
 @Composable
 fun NormalTransactionProcessingScreen(
@@ -112,15 +114,23 @@ fun NormalTransactionProcessingScreen(
             // Save transaction to DB
             // Parse amount string to Double (remove currency symbol and commas)
             val cleanAmount = amount.replace("[^\\d.]".toRegex(), "").toDoubleOrNull() ?: 0.0
-            
-            transactionRepository.insertTransaction(
+
+            val result = transactionRepository.insertTransaction(
                 amount = cleanAmount,
                 mode = "NORMAL",
-                status = "COMPLETED",
+                status = "SUCCESS",
                 intercepted = false, // Server will update this status if interception occurred
                 beneficiary = beneficiary
             )
-            transactionSaved = true
+            if (result.isSuccess) {
+                transactionSaved = true
+            } else {
+                Log.e(
+                    NORMAL_TRANSACTION_TAG,
+                    "Failed to persist normal transaction",
+                    result.exceptionOrNull()
+                )
+            }
         }
         
         delay(300)

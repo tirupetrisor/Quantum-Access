@@ -5,11 +5,9 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import com.example.quantumaccess.data.local.dao.AnalyticsDao
 import com.example.quantumaccess.data.local.dao.SessionDao
 import com.example.quantumaccess.data.local.dao.TransactionDao
 import com.example.quantumaccess.data.local.dao.UserDao
-import com.example.quantumaccess.data.local.entities.AnalyticsEntity
 import com.example.quantumaccess.data.local.entities.LocalTransactionEntity
 import com.example.quantumaccess.data.local.entities.LocalUserEntity
 import com.example.quantumaccess.data.local.entities.SessionEntity
@@ -22,10 +20,9 @@ import com.example.quantumaccess.data.local.entities.SessionEntity
     entities = [
         LocalUserEntity::class,
         SessionEntity::class,
-        LocalTransactionEntity::class,
-        AnalyticsEntity::class
+        LocalTransactionEntity::class
     ],
-    version = 3,
+    version = 5,
     exportSchema = true
 )
 @TypeConverters(com.example.quantumaccess.data.local.TypeConverters::class)
@@ -34,8 +31,6 @@ abstract class QuantumAccessDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
     abstract fun sessionDao(): SessionDao
     abstract fun transactionDao(): TransactionDao
-    abstract fun analyticsDao(): AnalyticsDao
-
     companion object {
         @Volatile
         private var INSTANCE: QuantumAccessDatabase? = null
@@ -48,7 +43,6 @@ abstract class QuantumAccessDatabase : RoomDatabase() {
                     "quantum_access_db"
                 )
                 .fallbackToDestructiveMigration()
-                // .addCallback(RoomCallback()) // Optional: prepopulate
                 .build()
                 INSTANCE = instance
                 instance
@@ -56,4 +50,3 @@ abstract class QuantumAccessDatabase : RoomDatabase() {
         }
     }
 }
-

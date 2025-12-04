@@ -1,5 +1,6 @@
 package com.example.quantumaccess.feature.transactions.presentation
 
+import android.util.Log
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -62,6 +63,8 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import com.example.quantumaccess.core.util.findActivity
 
+private const val QUANTUM_TRANSACTION_TAG = "QuantumTransactionScreen"
+
 @Composable
 fun QuantumTransactionProcessingScreen(
     modifier: Modifier = Modifier,
@@ -114,15 +117,23 @@ fun QuantumTransactionProcessingScreen(
                 if (!transactionSaved) {
                     // Save Quantum Transaction
                     val cleanAmount = amount.replace("[^\\d.]".toRegex(), "").toDoubleOrNull() ?: 0.0
-                    
-                    transactionRepository.insertTransaction(
+
+                    val result = transactionRepository.insertTransaction(
                         amount = cleanAmount,
                         mode = "QUANTUM",
-                        status = "COMPLETED",
+                        status = "SUCCESS",
                         intercepted = false, // Quantum is secure by definition (in this demo context)
                         beneficiary = beneficiary
                     )
-                    transactionSaved = true
+                    if (result.isSuccess) {
+                        transactionSaved = true
+                    } else {
+                        Log.e(
+                            QUANTUM_TRANSACTION_TAG,
+                            "Failed to persist quantum transaction",
+                            result.exceptionOrNull()
+                        )
+                    }
                 }
                 
             } else {

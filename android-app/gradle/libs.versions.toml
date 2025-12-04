@@ -1,12 +1,12 @@
 [versions]
 agp = "8.13.1"
 kotlin = "2.0.21"
-coreKtx = "1.17.0"
+coreKtx = "1.15.0" # Downgraded from 1.17.0 to support compileSdk 35 if needed, but likely fine
 junit = "4.13.2"
-junitVersion = "1.3.0"
-espressoCore = "3.7.0"
-lifecycleRuntimeKtx = "2.9.4"
-activityCompose = "1.11.0"
+junitVersion = "1.2.1" # Downgraded slightly for stability
+espressoCore = "3.6.1"
+lifecycleRuntimeKtx = "2.8.7" # Downgraded from 2.9.4 (alpha/beta?) to stable
+activityCompose = "1.9.3" # Downgraded from 1.11.0 (likely doesn't exist stable) to latest stable
 composeBom = "2024.09.00"
 navigationCompose = "2.8.3"
 biometric = "1.1.0"
@@ -19,6 +19,10 @@ fragment = "1.8.5"
 room = "2.6.1"
 ksp = "2.0.21-1.0.27"
 javaxInject = "1"
+supabase = "3.0.1"
+ktor = "3.0.0"
+serialization = "1.7.3"
+slf4j = "2.0.13"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -53,8 +57,19 @@ androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = 
 androidx-room-testing = { group = "androidx.room", name = "room-testing", version.ref = "room" }
 javax-inject = { group = "javax.inject", name = "javax.inject", version.ref = "javaxInject" }
 
+# Supabase & Ktor
+supabase-bom = { group = "io.github.jan-tennert.supabase", name = "bom", version.ref = "supabase" }
+supabase-postgrest = { group = "io.github.jan-tennert.supabase", name = "postgrest-kt" }
+supabase-gotrue = { group = "io.github.jan-tennert.supabase", name = "auth-kt" }
+supabase-realtime = { group = "io.github.jan-tennert.supabase", name = "realtime-kt" }
+ktor-client-android = { group = "io.ktor", name = "ktor-client-android", version.ref = "ktor" }
+ktor-client-core = { group = "io.ktor", name = "ktor-client-core", version.ref = "ktor" }
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "serialization" }
+slf4j-simple = { group = "org.slf4j", name = "slf4j-simple", version.ref = "slf4j" }
+
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

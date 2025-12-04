@@ -1,5 +1,7 @@
 package com.example.quantumaccess.feature.history.presentation
 
+import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -82,12 +84,15 @@ import com.example.quantumaccess.domain.repository.TransactionRepository
 import kotlinx.coroutines.launch
 
 import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import android.app.Activity
 import com.example.quantumaccess.core.util.findActivity
 
 import androidx.compose.foundation.layout.navigationBarsPadding
+
+private const val HISTORY_TAG = "TransactionHistoryScreen"
 
 @Composable
 fun TransactionHistoryScreen(
@@ -109,6 +114,7 @@ fun TransactionHistoryScreen(
         }
     }
 
+    val context = LocalContext.current
 	val coroutineScope = rememberCoroutineScope()
 	val transactions by transactionRepository
 		.observeTransactionHistory()
@@ -139,13 +145,23 @@ fun TransactionHistoryScreen(
 				TransactionChannel.QUANTUM -> "QUANTUM"
 				TransactionChannel.NORMAL -> "NORMAL"
 			}
-			transactionRepository.insertTransaction(
+			val result = transactionRepository.insertTransaction(
 				amount = entry.amountValue,
 				mode = mode,
 				status = DuplicateStatusMessage,
 				intercepted = false,
 				beneficiary = entry.beneficiary
 			)
+			if (result.isFailure) {
+				Log.e(
+					HISTORY_TAG,
+					"Failed to duplicate transaction ${entry.id}",
+					result.exceptionOrNull()
+				)
+                Toast.makeText(context, "Failed to duplicate transaction", Toast.LENGTH_SHORT).show()
+			} else {
+                Toast.makeText(context, "Transaction duplicated successfully", Toast.LENGTH_SHORT).show()
+            }
 		}
 	}
 
@@ -444,7 +460,7 @@ private enum class HistoryFilter(val label: String) {
 }
 
 private val ScreenBackground = Cloud100
-private const val DuplicateStatusMessage = "Duplicated from history"
+private const val DuplicateStatusMessage = "SUCCESS"
 
 private data class TransactionHistoryUiModel(
 	val amount: String,
