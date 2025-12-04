@@ -14,6 +14,7 @@ data class SessionEntity(
     @PrimaryKey
     val token: String,
     val userId: UUID,
+    val lastActiveAt: Instant,
     val expiresAt: Instant
 )
 

@@ -1,10 +1,12 @@
 package com.example.quantumaccess.app
 
 import android.app.Application
+import com.example.quantumaccess.core.network.SupabaseClientProvider
 import com.example.quantumaccess.data.local.QuantumAccessDatabase
 import com.example.quantumaccess.data.local.SecurePrefsManager
+import com.example.quantumaccess.data.remote.RemoteTransactionDataSource
 import com.example.quantumaccess.data.repository.DeviceRepositoryImpl
-import com.example.quantumaccess.data.repository.LocalTransactionRepositoryImpl
+import com.example.quantumaccess.data.repository.TransactionRepositoryImpl
 import com.example.quantumaccess.data.sample.RepositoryProvider
 import com.example.quantumaccess.domain.repository.DeviceRepository
 import com.example.quantumaccess.domain.repository.TransactionRepository
@@ -27,17 +29,25 @@ class QuantumAccessApplication : Application() {
         // 1. Initialize Database
         database = QuantumAccessDatabase.getInstance(this)
         
-        // 2. Initialize Repositories
+        // 2. Initialize Remote Data Sources
+        val supabaseClient = SupabaseClientProvider.client
+        val remoteTransactionDS = RemoteTransactionDataSource(supabaseClient)
+        
+        // 3. Initialize Repositories
         val transactionDao = database.transactionDao()
         val userDao = database.userDao()
         val prefs = SecurePrefsManager(this)
         
-        transactionRepository = LocalTransactionRepositoryImpl(transactionDao)
+        transactionRepository = TransactionRepositoryImpl(
+            context = this,
+            transactionDao = transactionDao,
+            userDao = userDao,
+            remoteDataSource = remoteTransactionDS,
+            supabase = supabaseClient
+        )
         deviceRepository = DeviceRepositoryImpl(prefs, userDao)
 
-        // 3. Initialize Service Locator (Legacy bridge)
+        // 4. Initialize Service Locator (Legacy bridge)
         RepositoryProvider.initialize(transactionRepository, deviceRepository)
     }
 }
-
-

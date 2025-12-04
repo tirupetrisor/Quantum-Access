@@ -3,12 +3,11 @@ package com.example.quantumaccess.feature.auth.data
 import android.content.Context
 import android.content.Intent
 import android.content.IntentSender
+import com.example.quantumaccess.R
 import com.google.android.gms.auth.api.identity.BeginSignInRequest
-import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.gms.auth.api.identity.SignInClient
-import com.google.android.gms.common.api.ApiException
-import kotlinx.coroutines.tasks.await
 import java.util.concurrent.CancellationException
+import kotlinx.coroutines.tasks.await
 
 class GoogleAuthClient(
     private val context: Context,
@@ -22,7 +21,6 @@ class GoogleAuthClient(
         } catch (e: Exception) {
             e.printStackTrace()
             if (e is CancellationException) throw e
-            // Fallback to manual selection if auto-select fails
             try {
                 oneTapClient.beginSignIn(
                     buildSignInRequest(autoSelect = false)
@@ -37,27 +35,35 @@ class GoogleAuthClient(
     }
 
     suspend fun signInWithIntent(intent: Intent): SignInResult {
-        val credential = oneTapClient.getSignInCredentialFromIntent(intent)
-        val googleIdToken = credential.googleIdToken
-        val username = credential.id
-        val name = credential.displayName
-        val profilePictureUrl = credential.profilePictureUri?.toString()
-        val email = credential.id // Often ID is email in newer APIs, but let's check ID token claims if needed. For now use ID.
+        return try {
+            val credential = oneTapClient.getSignInCredentialFromIntent(intent)
+            val googleIdToken = credential.googleIdToken
+            val username = credential.id
+            val name = credential.displayName
+            val profilePictureUrl = credential.profilePictureUri?.toString()
+            val email = credential.id 
 
-        return if (googleIdToken != null) {
+            if (googleIdToken != null) {
+                 SignInResult(
+                    data = UserData(
+                        userId = username,
+                        username = name ?: "",
+                        profilePictureUrl = profilePictureUrl,
+                        email = email,
+                        idToken = googleIdToken // IMPORTANT: Added ID Token
+                    ),
+                    errorMessage = null
+                )
+            } else {
+                SignInResult(
+                    data = null,
+                    errorMessage = "Google Sign In failed: No ID Token"
+                )
+            }
+        } catch (e: Exception) {
              SignInResult(
-                data = UserData(
-                    userId = username,
-                    username = name ?: "",
-                    profilePictureUrl = profilePictureUrl,
-                    email = email
-                ),
-                errorMessage = null
-            )
-        } else {
-            SignInResult(
                 data = null,
-                errorMessage = "Google Sign In failed: No ID Token"
+                errorMessage = e.message
             )
         }
     }
@@ -71,7 +77,7 @@ class GoogleAuthClient(
             .setGoogleIdTokenRequestOptions(
                 BeginSignInRequest.GoogleIdTokenRequestOptions.builder()
                     .setSupported(true)
-                    // NOTE: REPLACE THIS WITH YOUR REAL WEB CLIENT ID FROM GOOGLE CLOUD CONSOLE
+                    // Replace with your actual Web Client ID from Google Cloud Console
                     .setServerClientId("889369247024-tgtf2ppnd9mik8vj39map1o755atdut8.apps.googleusercontent.com")
                     .setFilterByAuthorizedAccounts(false)
                     .build()
@@ -90,6 +96,6 @@ data class UserData(
     val userId: String,
     val username: String,
     val email: String,
-    val profilePictureUrl: String?
+    val profilePictureUrl: String?,
+    val idToken: String? = null // Added field
 )
-

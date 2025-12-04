@@ -4,7 +4,11 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.quantumaccess.app.QuantumAccessApplication
+import com.example.quantumaccess.core.network.SupabaseClientProvider
+import com.example.quantumaccess.data.local.SecurePrefsManager
 import com.example.quantumaccess.data.repository.AuthRepository
+import com.example.quantumaccess.data.repository.RegistrationException
+import com.example.quantumaccess.data.sample.RepositoryProvider
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,14 +30,16 @@ class RegisterViewModel(app: Application) : AndroidViewModel(app) {
     private val deviceRepo = quantumApp.deviceRepository
     
     private val repo = AuthRepository(
-        prefs = com.example.quantumaccess.data.local.SecurePrefsManager(app),
-        userDao = quantumApp.database.userDao(), 
-        useMock = true
+        prefs = SecurePrefsManager(app),
+        userDao = quantumApp.database.userDao(),
+        transactionDao = quantumApp.database.transactionDao(),
+        sessionDao = quantumApp.database.sessionDao(),
+        supabase = SupabaseClientProvider.client
     )
 
     sealed interface Event {
         data object Success : Event
-        // Păstrăm Error generic pentru Toast-uri dacă e cazul, dar preferăm state-ul pentru field errors
+        data class BiometricUpdated(val enabled: Boolean) : Event
         data class Error(val message: String) : Event
     }
 
@@ -52,43 +58,60 @@ class RegisterViewModel(app: Application) : AndroidViewModel(app) {
             _uiState.update { it.copy(isLoading = true, usernameError = null, emailError = null, generalError = null) }
             val deviceId = deviceRepo.getDeviceId() 
             
+            // Note: DeviceID logic is not enforced by remote DB yet, but passed for consistency
             val result = repo.register(fullName, username, email, password, deviceId, biometricEnabled)
             
             _uiState.update { it.copy(isLoading = false) }
             
             result.fold(
-                onSuccess = { _events.send(Event.Success) },
-                onFailure = { error -> 
-                    val msg = error.message ?: "Registration failed"
-                    if (msg.contains("Username-ul este deja utilizat", ignoreCase = true)) {
-                        _uiState.update { it.copy(usernameError = msg) }
-                    } else if (msg.contains("Există deja un cont cu acest email", ignoreCase = true)) {
-                        _uiState.update { it.copy(emailError = msg) }
-                    } else {
-                        _uiState.update { it.copy(generalError = msg) }
-                        _events.send(Event.Error(msg))
+                onSuccess = {
+                    val user = repo.getCurrentUser()
+                    if (user != null) {
+                         try {
+                             RepositoryProvider.transactionRepository.syncTransactions(user.userId)
+                         } catch (e: Exception) {
+                             // Ignore sync error during reg
+                         }
+                    }
+                    _events.send(Event.Success) 
+                },
+                onFailure = { error ->
+                    when (error) {
+                        is RegistrationException -> handleRegistrationException(error)
+                        else -> handleGenericRegistrationError(error)
                     }
                 }
             )
         }
     }
 
-    fun onGoogleSignInSuccess(email: String, name: String, googleId: String, biometricEnabled: Boolean) {
+    fun onGoogleSignInSuccess(email: String, name: String, googleId: String, biometricEnabled: Boolean, idToken: String?) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, usernameError = null, emailError = null, generalError = null) }
-
-            val result = repo.googleSignIn(email, name, googleId, biometricEnabled)
-            
-            _uiState.update { it.copy(isLoading = false) }
-            
-            result.fold(
-                onSuccess = { _events.send(Event.Success) },
-                onFailure = { 
-                    val msg = it.message ?: "Google Sign-In failed"
-                    _uiState.update { s -> s.copy(generalError = msg) }
-                    _events.send(Event.Error(msg)) 
-                }
-            )
+            if (idToken != null) {
+                _uiState.update { it.copy(isLoading = true) }
+                val result = repo.googleSignIn(idToken, biometricEnabled = biometricEnabled)
+                _uiState.update { it.copy(isLoading = false) }
+                
+                result.fold(
+                    onSuccess = {
+                         val user = repo.getCurrentUser()
+                         if (user != null) {
+                             try {
+                                 RepositoryProvider.transactionRepository.syncTransactions(user.userId)
+                             } catch (e: Exception) {
+                                 // Ignore sync error
+                             }
+                         }
+                        _events.send(Event.Success)
+                    },
+                    onFailure = { error -> 
+                        _uiState.update { it.copy(generalError = error.message ?: "Google Sign-In failed") }
+                        _events.send(Event.Error(error.message ?: "Google Sign-In failed"))
+                    }
+                )
+            } else {
+                _events.send(Event.Error("Google Sign-In failed: Missing ID Token"))
+            }
         }
     }
 
@@ -96,9 +119,50 @@ class RegisterViewModel(app: Application) : AndroidViewModel(app) {
         _uiState.update { it.copy(isLoading = isLoading) }
     }
 
-    // Legacy method kept for compatibility but should ideally be replaced
     fun onGoogleSignInClick(biometricEnabled: Boolean) {
-        // This was the mock method. We'll redirect it to a failed state if called directly without data
-        // or just log a warning. For now, let's leave it but it won't be used by the real UI flow.
+       // Trigger native flow
+    }
+
+    fun enableBiometric(enabled: Boolean) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, generalError = null) }
+            val result = repo.updateBiometricStatus(enabled)
+            _uiState.update { it.copy(isLoading = false) }
+
+            result.fold(
+                onSuccess = { _events.send(Event.BiometricUpdated(enabled)) },
+                onFailure = { error ->
+                    val message = error.message ?: "Failed to update biometric preference"
+                    _uiState.update { it.copy(generalError = message) }
+                    _events.send(Event.Error(message))
+                }
+            )
+        }
+    }
+
+    private suspend fun handleRegistrationException(error: RegistrationException) {
+        val message = error.message ?: "Registration failed"
+        when (error.type) {
+            RegistrationException.Type.USERNAME_TAKEN -> {
+                _uiState.update { it.copy(usernameError = message) }
+            }
+            RegistrationException.Type.EMAIL_TAKEN -> {
+                _uiState.update { it.copy(emailError = message) }
+            }
+            RegistrationException.Type.CONFIRMATION_REQUIRED -> {
+                _uiState.update { it.copy(generalError = message) }
+                _events.send(Event.Error(message))
+            }
+            else -> {
+                _uiState.update { it.copy(generalError = message) }
+                _events.send(Event.Error(message))
+            }
+        }
+    }
+
+    private suspend fun handleGenericRegistrationError(error: Throwable) {
+        val message = error.message ?: "Registration failed"
+        _uiState.update { it.copy(generalError = message) }
+        _events.send(Event.Error(message))
     }
 }

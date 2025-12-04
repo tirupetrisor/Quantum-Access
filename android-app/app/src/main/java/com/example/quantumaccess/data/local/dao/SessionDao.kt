@@ -21,6 +21,9 @@ interface SessionDao {
     @Query("SELECT * FROM sessions ORDER BY expiresAt DESC LIMIT 1")
     fun getSessionFlow(): Flow<SessionEntity?>
 
+    @Query("SELECT * FROM sessions ORDER BY expiresAt DESC LIMIT 1")
+    suspend fun getLatestSession(): SessionEntity?
+
     @Query("DELETE FROM sessions")
     suspend fun clearSession()
 }

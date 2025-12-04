@@ -49,6 +49,7 @@ import com.example.quantumaccess.core.designsystem.theme.Slate700
 import com.example.quantumaccess.core.designsystem.theme.Slate800
 import com.example.quantumaccess.core.designsystem.theme.Steel200
 import com.example.quantumaccess.core.designsystem.theme.Steel300
+import com.example.quantumaccess.core.designsystem.theme.Steel300 as Steel300Color
 
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.platform.LocalView
@@ -168,7 +169,8 @@ private fun DashboardCard(
 			.clip(RoundedCornerShape(18.dp))
 			.scale(scale)
 			.clickable(
-				interactionSource = interactionSource
+				interactionSource = interactionSource,
+				indication = null // Removed ripple/indication parameter which caused ambiguity
 			) { onClick() },
 		tonalElevation = 0.dp,
 		border = androidx.compose.foundation.BorderStroke(1.dp, borderColor)
@@ -232,7 +234,7 @@ private fun Footer() {
 		Spacer(modifier = Modifier.height(6.dp))
 		Text(
 			"Secured by Quantum Key Distribution",
-			color = Steel300,
+			color = Steel300Color,
 			style = MaterialTheme.typography.labelSmall,
 			textAlign = TextAlign.Center
 		)

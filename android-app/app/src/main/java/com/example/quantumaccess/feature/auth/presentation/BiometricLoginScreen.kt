@@ -1,9 +1,13 @@
 package com.example.quantumaccess.feature.auth.presentation
 
+import android.app.Activity
+import android.content.Context
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
-import android.content.Context
-import android.content.ContextWrapper
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -26,10 +30,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,7 +45,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
-import androidx.fragment.app.FragmentActivity
 import com.example.quantumaccess.core.designsystem.components.FingerprintPulseButton
 import com.example.quantumaccess.core.designsystem.components.GoogleSignInButton
 import com.example.quantumaccess.core.designsystem.components.InputField
@@ -52,12 +55,16 @@ import com.example.quantumaccess.core.designsystem.components.QuantumLogo
 import com.example.quantumaccess.core.designsystem.theme.BorderSubtle
 import com.example.quantumaccess.core.designsystem.theme.DeepBlue
 import com.example.quantumaccess.core.designsystem.theme.NightBlack
+import com.example.quantumaccess.feature.auth.data.GoogleAuthClient
+import com.google.android.gms.auth.api.identity.Identity
+import kotlinx.coroutines.launch
 
 @Composable
 fun BiometricLoginScreen(
 	modifier: Modifier = Modifier,
+    isLoading: Boolean = false,
 	onAuthenticate: () -> Unit = {},
-    onGoogleSignIn: () -> Unit = {}, // Add if needed for actual implementation later
+    onGoogleSignIn: (String?) -> Unit = { _ -> },
     onLoginWithPassword: (String, String) -> Unit = { _, _ -> onAuthenticate() } // Simplified for now
 ) {
 	val context = LocalContext.current
@@ -65,6 +72,39 @@ fun BiometricLoginScreen(
 	val prefs = remember { SecurePrefsManager(context) }
 	val biometricManager = remember { BiometricManager.from(context) }
 	val activity = remember { context.findFragmentActivity() }
+    val coroutineScope = rememberCoroutineScope()
+    var isGoogleLoading by remember { mutableStateOf(false) }
+    val googleAuthClient = remember {
+        GoogleAuthClient(
+            context = context,
+            oneTapClient = Identity.getSignInClient(context)
+        )
+    }
+    val googleLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult(),
+        onResult = { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                coroutineScope.launch {
+                    val dataIntent = result.data
+                    if (dataIntent == null) {
+                        Toast.makeText(context, "Google Sign-In cancelled", Toast.LENGTH_SHORT).show()
+                        isGoogleLoading = false
+                        return@launch
+                    }
+                    val signInResult = googleAuthClient.signInWithIntent(dataIntent)
+                    val idToken = signInResult.data?.idToken
+                    if (idToken != null) {
+                        onGoogleSignIn(idToken)
+                    } else {
+                        Toast.makeText(context, signInResult.errorMessage ?: "Google Sign-In failed", Toast.LENGTH_SHORT).show()
+                    }
+                    isGoogleLoading = false
+                }
+            } else {
+                isGoogleLoading = false
+            }
+        }
+    )
 
     // State for manual login fallback
     var email by remember { mutableStateOf("") }
@@ -161,14 +201,28 @@ fun BiometricLoginScreen(
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
+            val googleButtonLoading = isGoogleLoading || isLoading
             // Google Sign In
             GoogleSignInButton(
                 onClick = { 
-                    // Simulate Google Login -> Success
-                    onAuthenticate() 
+                    if (googleButtonLoading) return@GoogleSignInButton
+                    isGoogleLoading = true
+                    coroutineScope.launch {
+                        val intentSender = googleAuthClient.signIn()
+                        if (intentSender != null) {
+                            googleLauncher.launch(
+                                IntentSenderRequest.Builder(intentSender).build()
+                            )
+                        } else {
+                            isGoogleLoading = false
+                            Toast.makeText(context, "Unable to start Google Sign-In", Toast.LENGTH_SHORT).show()
+                        }
+                    }
                 },
                 modifier = Modifier.fillMaxWidth(),
-                text = "Sign in with Google"
+                text = "Sign in with Google",
+                loading = googleButtonLoading,
+                enabled = !googleButtonLoading
             )
             
             Spacer(modifier = Modifier.height(16.dp))
@@ -215,7 +269,9 @@ fun BiometricLoginScreen(
                         PrimaryActionButton(
                             text = "Log In",
                             onClick = { onLoginWithPassword(email, password) },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !isLoading,
+                            loading = isLoading && showPasswordLogin
                         )
                     }
                 }
