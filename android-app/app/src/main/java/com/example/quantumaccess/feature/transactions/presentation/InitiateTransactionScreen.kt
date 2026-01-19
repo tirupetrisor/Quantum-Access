@@ -90,15 +90,14 @@ fun InitiateTransactionScreen(
 
 		Column(
 			modifier = Modifier
-				.padding(horizontal = 16.dp, vertical = 12.dp)
 				.fillMaxSize()
-                .verticalScroll(rememberScrollState()), // Allow scrolling
-			verticalArrangement = Arrangement.SpaceBetween
+                .verticalScroll(rememberScrollState()) // Allow scrolling
+				.padding(horizontal = 16.dp, vertical = 12.dp)
 		) {
+			// Content card
 			Box(
 				modifier = Modifier
-					.fillMaxWidth()
-					.weight(1f),
+					.fillMaxWidth(),
 				contentAlignment = Alignment.Center
 			) {
 				Surface(
@@ -115,10 +114,10 @@ fun InitiateTransactionScreen(
 				Column(
 					modifier = Modifier
 						.fillMaxWidth()
-						.padding(20.dp),
+						.padding(16.dp),
 					verticalArrangement = Arrangement.Top
 				) {
-					Spacer(modifier = Modifier.height(20.dp))
+					Spacer(modifier = Modifier.height(12.dp))
 					Text(
 						text = "Initiate Transaction",
 						style = MaterialTheme.typography.titleLarge,
@@ -128,7 +127,7 @@ fun InitiateTransactionScreen(
 						textAlign = TextAlign.Center
 					)
 
-					Spacer(modifier = Modifier.height(20.dp))
+					Spacer(modifier = Modifier.height(16.dp))
 					InputField(
 						value = amount,
 						onValueChange = { amount = it },
@@ -136,7 +135,7 @@ fun InitiateTransactionScreen(
 						placeholder = "0.00",
 						labelIcon = Icons.Filled.Euro
 					)
-					Spacer(modifier = Modifier.height(24.dp))
+					Spacer(modifier = Modifier.height(16.dp))
 					InputField(
 						value = beneficiary,
 						onValueChange = { beneficiary = it },
@@ -145,17 +144,16 @@ fun InitiateTransactionScreen(
 						labelIcon = Icons.Filled.Person
 					)
 
-					Spacer(modifier = Modifier.height(24.dp))
-					Spacer(modifier = Modifier.height(32.dp))
+					Spacer(modifier = Modifier.height(20.dp))
 					Text(
 						text = "Select Transaction Mode",
-						style = MaterialTheme.typography.titleLarge,
+						style = MaterialTheme.typography.titleMedium,
 						color = DeepBlue,
 						fontWeight = FontWeight.SemiBold,
 						modifier = Modifier.fillMaxWidth(),
 						textAlign = TextAlign.Center
 					)
-					Spacer(modifier = Modifier.height(16.dp))
+					Spacer(modifier = Modifier.height(12.dp))
 
 					// Normal card
 					ModeCard(
@@ -165,7 +163,7 @@ fun InitiateTransactionScreen(
 						onClick = { selectedMode = TransactionMode.NORMAL },
 						enabled = true
 					)
-					Spacer(modifier = Modifier.height(12.dp))
+					Spacer(modifier = Modifier.height(10.dp))
 					// Quantum card
 					ModeCard(
 						title = "Quantum Transaction (QKD Mode)",
@@ -175,16 +173,19 @@ fun InitiateTransactionScreen(
 						enabled = true
 					)
 
-					Spacer(modifier = Modifier.height(8.dp))
+					Spacer(modifier = Modifier.height(12.dp))
 				}
 				}
 			}
+			
+			// Button at bottom
+			Spacer(modifier = Modifier.height(16.dp))
 			PrimaryActionButton(
 				text = "Continue",
 				enabled = amount.isNotBlank() && beneficiary.isNotBlank(),
 				onClick = { onContinue(amount.trim(), beneficiary.trim(), selectedMode) }
 			)
-			Spacer(modifier = Modifier.height(8.dp))
+			Spacer(modifier = Modifier.height(16.dp))
 		}
 	}
 }

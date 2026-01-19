@@ -24,6 +24,7 @@ import com.example.quantumaccess.feature.splash.presentation.SplashScreen
 import com.example.quantumaccess.feature.transactions.presentation.InitiateTransactionScreen
 import com.example.quantumaccess.feature.transactions.presentation.NormalTransactionProcessingScreen
 import com.example.quantumaccess.feature.transactions.presentation.QuantumTransactionProcessingScreen
+import com.example.quantumaccess.feature.transactions.presentation.QuantumTransactionProcessingScreenV2
 import com.example.quantumaccess.feature.transactions.presentation.TransactionMode
 import com.example.quantumaccess.viewmodel.LoginViewModel
 import com.example.quantumaccess.viewmodel.RegisterViewModel
@@ -140,13 +141,15 @@ fun AppNavGraph() {
             
 			BiometricLoginScreen(
                 isLoading = uiState.isLoading,
+                errorMessage = uiState.error,
 				onAuthenticate = { vm.onBiometricAuthenticated() },
                 onGoogleSignIn = { idToken ->
                     vm.onGoogleSignInSuccess(idToken)
                 },
                 onLoginWithPassword = { email, password ->
                      vm.login(email, password)
-                }
+                },
+                onClearError = { vm.clearError() }
 			)
 		}
 		composable(Routes.LocationVerification) {
@@ -273,7 +276,7 @@ fun AppNavGraph() {
 				backStackEntry.arguments?.getString("beneficiary").orEmpty().ifBlank { "TechCorp Solutions SRL" }
 			val quantumIdArg =
 				backStackEntry.arguments?.getString("quantumId").orEmpty().ifBlank { "#QTX-7F2A-8B91" }
-			QuantumTransactionProcessingScreen(
+			QuantumTransactionProcessingScreenV2(
 				amount = amountArg,
 				beneficiary = beneficiaryArg,
 				quantumId = quantumIdArg,
