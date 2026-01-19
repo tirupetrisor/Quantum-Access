@@ -61,6 +61,15 @@ class SecurePrefsManager @Inject constructor(context: Context) {
         prefs.edit().putBoolean(KEY_MOCK_LOCATION, enabled).apply()
     }
 
+    // Eve (Eavesdropper) Simulation
+    fun isEveSimulationEnabled(): Boolean {
+        return prefs.getBoolean(KEY_EVE_SIMULATION, false)
+    }
+
+    fun setEveSimulationEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_EVE_SIMULATION, enabled).apply()
+    }
+
     private fun initEncryptedPrefs(context: Context): SharedPreferences {
         return runCatching { buildEncryptedPrefs(context) }
             .getOrElse { error ->
@@ -118,6 +127,7 @@ class SecurePrefsManager @Inject constructor(context: Context) {
         private const val KEY_BIOMETRIC_ENABLED = "biometric_enabled"
         private const val KEY_MOCK_QKD = "mock_qkd_enabled"
         private const val KEY_MOCK_LOCATION = "mock_location_enabled"
+        private const val KEY_EVE_SIMULATION = "eve_simulation_enabled"
     }
 }
 

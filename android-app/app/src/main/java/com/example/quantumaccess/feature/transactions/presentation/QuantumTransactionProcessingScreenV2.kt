@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -37,6 +38,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,43 +46,49 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.quantumaccess.app.QuantumAccessApplication
 import com.example.quantumaccess.core.designsystem.components.QuantumLogoGradientBadge
 import com.example.quantumaccess.core.designsystem.components.QuantumTopBar
 import com.example.quantumaccess.core.designsystem.theme.AlertRed
 import com.example.quantumaccess.core.designsystem.theme.SecureGreen
+import com.example.quantumaccess.core.util.findActivity
 import com.example.quantumaccess.data.sample.RepositoryProvider
 import com.example.quantumaccess.domain.model.QuantumProcessStep
-import com.example.quantumaccess.domain.repository.TransactionRepository
+import com.example.quantumaccess.viewmodel.QuantumTransactionViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.runtime.SideEffect
-import androidx.compose.ui.platform.LocalView
-import androidx.core.view.WindowCompat
-import com.example.quantumaccess.core.util.findActivity
-
-private const val QUANTUM_TRANSACTION_TAG = "QuantumTransactionScreen"
-
+/**
+ * New Quantum Transaction Processing Screen with REAL QKD integration
+ */
 @Composable
-fun QuantumTransactionProcessingScreen(
+fun QuantumTransactionProcessingScreenV2(
     modifier: Modifier = Modifier,
     amount: String = "€2,450.00",
     beneficiary: String = "TechCorp Solutions SRL",
     quantumId: String = "#QTX-7F2A-8B91",
     onReturnToDashboard: () -> Unit = {},
-    onLogout: () -> Unit = {},
-    transactionRepository: TransactionRepository = RepositoryProvider.transactionRepository
+    onLogout: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val app = context.applicationContext as QuantumAccessApplication
+    val viewModel: QuantumTransactionViewModel = viewModel(
+        factory = QuantumTransactionViewModel.Factory(app)
+    )
+    
     // Force status bar icons to be light
     val view = LocalView.current
     if (!view.isInEditMode) {
-        SideEffect {
+        androidx.compose.runtime.SideEffect {
             val window = view.context.findActivity()?.window
             if (window != null) {
                 val controller = WindowCompat.getInsetsController(window, view)
@@ -89,62 +97,39 @@ fun QuantumTransactionProcessingScreen(
         }
     }
 
-    val steps = remember(transactionRepository) { transactionRepository.getQuantumProcessSteps() }.takeIf { it.isNotEmpty() }
-        ?: listOf(
-            QuantumProcessStep(
-                progress = 1f,
-                status = "Quantum transaction status unavailable",
-                detail = "No steps defined",
-                isTerminal = true
-            )
-        )
-
-    var currentStepIndex by remember { mutableIntStateOf(0) }
+    var currentStep by remember { mutableStateOf<QuantumProcessStep?>(null) }
     var isCompleted by remember { mutableStateOf(false) }
-    var transactionSaved by remember { mutableStateOf(false) } // Prevent duplicates
+    var isError by remember { mutableStateOf(false) }
     val progress = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         progress.snapTo(0f)
-        steps.forEachIndexed { index, step ->
-            currentStepIndex = index
-            progress.animateTo(
-                step.progress,
-                animationSpec = tween(durationMillis = 1400, easing = FastOutSlowInEasing)
-            )
+        
+        // Parse amount
+        val cleanAmount = amount.replace("[^\\d.]".toRegex(), "").toDoubleOrNull() ?: 0.0
+        
+        // Process quantum transaction with real QKD
+        viewModel.processQuantumTransaction(
+            amount = cleanAmount,
+            beneficiary = beneficiary
+        ) { step ->
+            currentStep = step
+            scope.launch {
+                progress.animateTo(
+                    step.progress,
+                    animationSpec = tween(durationMillis = 1200, easing = FastOutSlowInEasing)
+                )
+            }
+            
             if (step.isTerminal) {
                 delay(400)
                 isCompleted = true
-                
-                if (!transactionSaved) {
-                    // Save Quantum Transaction
-                    val cleanAmount = amount.replace("[^\\d.]".toRegex(), "").toDoubleOrNull() ?: 0.0
-
-                    val result = transactionRepository.insertTransaction(
-                        amount = cleanAmount,
-                        mode = "QUANTUM",
-                        status = "SUCCESS",
-                        intercepted = false, // Quantum is secure by definition (in this demo context)
-                        beneficiary = beneficiary
-                    )
-                    if (result.isSuccess) {
-                        transactionSaved = true
-                    } else {
-                        Log.e(
-                            QUANTUM_TRANSACTION_TAG,
-                            "Failed to persist quantum transaction",
-                            result.exceptionOrNull()
-                        )
-                    }
-                }
-                
             } else {
-                delay(900)
+                delay(800)
             }
         }
     }
-
-    val currentStep = steps[currentStepIndex.coerceIn(0, steps.lastIndex)]
 
     Box(
         modifier = modifier
@@ -162,7 +147,7 @@ fun QuantumTransactionProcessingScreen(
         ) {
             QuantumTopBar(
                 title = "QuantumAccess",
-                subtitle = "Quantum Transaction Mode",
+                subtitle = "Real QKD Transaction Mode",
                 backgroundColor = Color(0xFF151E68),
                 showLogoutButton = true,
                 onLogoutClick = onLogout,
@@ -196,7 +181,12 @@ fun QuantumTransactionProcessingScreen(
                         beneficiary = beneficiary,
                         quantumId = quantumId,
                         progress = progress.value,
-                        currentStep = currentStep
+                        currentStep = currentStep ?: QuantumProcessStep(
+                            0f,
+                            "Initializing...",
+                            "Starting quantum protocol",
+                            false
+                        )
                     )
                 }
             }
@@ -226,7 +216,7 @@ private fun ConnectionStatusSection() {
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "Connected to RonaQCI Timișoara",
+                text = "Real QKD Service Active",
                 color = Color(0xFFDAE4FF),
                 style = MaterialTheme.typography.bodyMedium
             )
@@ -256,7 +246,7 @@ private fun QuantumSecureBadge() {
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "Quantum-Secured Channel Active",
+                text = "Quantum Key Distribution Active",
                 color = Color(0xFF9DEAE9),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Medium
@@ -455,10 +445,4 @@ private fun QuantumReturnButton(onClick: () -> Unit, modifier: Modifier = Modifi
             )
         }
     }
-}
-
-@Preview(showSystemUi = true, showBackground = true)
-@Composable
-private fun QuantumTransactionProcessingPreview() {
-    QuantumTransactionProcessingScreen()
 }

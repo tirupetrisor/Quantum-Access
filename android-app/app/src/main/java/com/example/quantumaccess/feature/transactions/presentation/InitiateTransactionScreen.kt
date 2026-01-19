@@ -1,5 +1,6 @@
 package com.example.quantumaccess.feature.transactions.presentation
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -49,10 +51,17 @@ import com.example.quantumaccess.core.designsystem.theme.Slate800
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
+import com.example.quantumaccess.core.designsystem.theme.AlertRed
 import com.example.quantumaccess.core.util.findActivity
+import com.example.quantumaccess.data.local.SecurePrefsManager
 
 enum class TransactionMode { NORMAL, QUANTUM }
 
@@ -61,9 +70,13 @@ fun InitiateTransactionScreen(
 	modifier: Modifier = Modifier,
 	onContinue: (amount: String, beneficiary: String, mode: TransactionMode) -> Unit = { _, _, _ -> }
 ) {
+	val context = LocalContext.current
+	val prefs = remember { SecurePrefsManager(context) }
+	
 	var amount by remember { mutableStateOf("") }
 	var beneficiary by remember { mutableStateOf("") }
 	var selectedMode by remember { mutableStateOf(TransactionMode.QUANTUM) }
+	var isEveEnabled by remember { mutableStateOf(prefs.isEveSimulationEnabled()) }
 
     // Force status bar icons to be light (visible on blue background)
     val view = LocalView.current
@@ -90,15 +103,14 @@ fun InitiateTransactionScreen(
 
 		Column(
 			modifier = Modifier
-				.padding(horizontal = 16.dp, vertical = 12.dp)
 				.fillMaxSize()
-                .verticalScroll(rememberScrollState()), // Allow scrolling
-			verticalArrangement = Arrangement.SpaceBetween
+                .verticalScroll(rememberScrollState()) // Allow scrolling
+				.padding(horizontal = 16.dp, vertical = 12.dp)
 		) {
+			// Content card
 			Box(
 				modifier = Modifier
-					.fillMaxWidth()
-					.weight(1f),
+					.fillMaxWidth(),
 				contentAlignment = Alignment.Center
 			) {
 				Surface(
@@ -115,10 +127,10 @@ fun InitiateTransactionScreen(
 				Column(
 					modifier = Modifier
 						.fillMaxWidth()
-						.padding(20.dp),
+						.padding(16.dp),
 					verticalArrangement = Arrangement.Top
 				) {
-					Spacer(modifier = Modifier.height(20.dp))
+					Spacer(modifier = Modifier.height(12.dp))
 					Text(
 						text = "Initiate Transaction",
 						style = MaterialTheme.typography.titleLarge,
@@ -128,7 +140,7 @@ fun InitiateTransactionScreen(
 						textAlign = TextAlign.Center
 					)
 
-					Spacer(modifier = Modifier.height(20.dp))
+					Spacer(modifier = Modifier.height(16.dp))
 					InputField(
 						value = amount,
 						onValueChange = { amount = it },
@@ -136,7 +148,7 @@ fun InitiateTransactionScreen(
 						placeholder = "0.00",
 						labelIcon = Icons.Filled.Euro
 					)
-					Spacer(modifier = Modifier.height(24.dp))
+					Spacer(modifier = Modifier.height(16.dp))
 					InputField(
 						value = beneficiary,
 						onValueChange = { beneficiary = it },
@@ -145,17 +157,16 @@ fun InitiateTransactionScreen(
 						labelIcon = Icons.Filled.Person
 					)
 
-					Spacer(modifier = Modifier.height(24.dp))
-					Spacer(modifier = Modifier.height(32.dp))
+					Spacer(modifier = Modifier.height(20.dp))
 					Text(
 						text = "Select Transaction Mode",
-						style = MaterialTheme.typography.titleLarge,
+						style = MaterialTheme.typography.titleMedium,
 						color = DeepBlue,
 						fontWeight = FontWeight.SemiBold,
 						modifier = Modifier.fillMaxWidth(),
 						textAlign = TextAlign.Center
 					)
-					Spacer(modifier = Modifier.height(16.dp))
+					Spacer(modifier = Modifier.height(12.dp))
 
 					// Normal card
 					ModeCard(
@@ -165,7 +176,7 @@ fun InitiateTransactionScreen(
 						onClick = { selectedMode = TransactionMode.NORMAL },
 						enabled = true
 					)
-					Spacer(modifier = Modifier.height(12.dp))
+					Spacer(modifier = Modifier.height(10.dp))
 					// Quantum card
 					ModeCard(
 						title = "Quantum Transaction (QKD Mode)",
@@ -175,16 +186,34 @@ fun InitiateTransactionScreen(
 						enabled = true
 					)
 
-					Spacer(modifier = Modifier.height(8.dp))
+					Spacer(modifier = Modifier.height(16.dp))
+					
+					// Eve Simulation Toggle (only for Quantum mode)
+					if (selectedMode == TransactionMode.QUANTUM) {
+						Divider(color = BorderLight, modifier = Modifier.padding(vertical = 8.dp))
+						
+						EveSimulationToggle(
+							isEnabled = isEveEnabled,
+							onToggle = { enabled ->
+								isEveEnabled = enabled
+								prefs.setEveSimulationEnabled(enabled)
+							}
+						)
+					}
+
+					Spacer(modifier = Modifier.height(12.dp))
 				}
 				}
 			}
+			
+			// Button at bottom
+			Spacer(modifier = Modifier.height(16.dp))
 			PrimaryActionButton(
 				text = "Continue",
 				enabled = amount.isNotBlank() && beneficiary.isNotBlank(),
 				onClick = { onContinue(amount.trim(), beneficiary.trim(), selectedMode) }
 			)
-			Spacer(modifier = Modifier.height(8.dp))
+			Spacer(modifier = Modifier.height(16.dp))
 		}
 	}
 }
@@ -253,6 +282,63 @@ private fun ModeCard(
 						.border(2.dp, OutlineGray, CircleShape)
 				)
 			}
+		}
+	}
+}
+
+@Composable
+private fun EveSimulationToggle(
+	isEnabled: Boolean,
+	onToggle: (Boolean) -> Unit
+) {
+	Surface(
+		shape = RoundedCornerShape(12.dp),
+		color = if (isEnabled) AlertRed.copy(alpha = 0.1f) else Color(0xFFF5F5F5),
+		border = BorderStroke(1.dp, if (isEnabled) AlertRed.copy(alpha = 0.3f) else BorderLight),
+		modifier = Modifier.fillMaxWidth()
+	) {
+		Row(
+			modifier = Modifier
+				.fillMaxWidth()
+				.padding(12.dp),
+			horizontalArrangement = Arrangement.SpaceBetween,
+			verticalAlignment = Alignment.CenterVertically
+		) {
+			Row(
+				verticalAlignment = Alignment.CenterVertically,
+				modifier = Modifier.weight(1f)
+			) {
+				Icon(
+					imageVector = Icons.Filled.Security,
+					contentDescription = null,
+					tint = if (isEnabled) AlertRed else Color.Gray,
+					modifier = Modifier.size(20.dp)
+				)
+				Spacer(modifier = Modifier.width(10.dp))
+				Column {
+					Text(
+						text = "Eve Simulation",
+						style = MaterialTheme.typography.bodyMedium,
+						fontWeight = FontWeight.SemiBold,
+						color = if (isEnabled) AlertRed else NightBlack
+					)
+					Text(
+						text = if (isEnabled) "Eavesdropping simulation active" else "Test interception detection",
+						style = MaterialTheme.typography.bodySmall,
+						color = Color.Gray
+					)
+				}
+			}
+			Switch(
+				checked = isEnabled,
+				onCheckedChange = onToggle,
+				colors = SwitchDefaults.colors(
+					checkedThumbColor = Color.White,
+					checkedTrackColor = AlertRed,
+					uncheckedThumbColor = Color.White,
+					uncheckedTrackColor = Color.Gray.copy(alpha = 0.4f)
+				)
+			)
 		}
 	}
 }

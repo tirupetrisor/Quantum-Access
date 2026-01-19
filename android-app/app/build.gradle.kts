@@ -29,6 +29,8 @@ android {
 
         buildConfigField("String", "SUPABASE_URL", "\"${localProperties["SUPABASE_URL"] ?: ""}\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"${localProperties["SUPABASE_ANON_KEY"] ?: ""}\"")
+        buildConfigField("String", "QKD_API_KEY", "\"${localProperties["QKD_API_KEY"] ?: ""}\"")
+        buildConfigField("String", "QKD_PROVIDER", "\"${localProperties["QKD_PROVIDER"] ?: "SIMULATION"}\"")
     }
 
     buildTypes {
@@ -85,6 +87,7 @@ dependencies {
     implementation(libs.ktor.client.core)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.slf4j.simple)
+    implementation(libs.okhttp)
 
     // Room
     implementation(libs.androidx.room.runtime)
