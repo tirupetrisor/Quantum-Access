@@ -56,14 +56,14 @@ class EveDetector {
             val qber = Random.nextDouble(0.12, 0.25) // High error rate
             val confidence = calculateConfidence(qber)
             
-            Log.w(TAG, "🚨 EVE DETECTED! QBER: ${qber * 100}%")
+            Log.w(TAG, "EVE DETECTED! QBER: ${qber * 100}%")
             
             EveDetectionResult(
                 isIntercepted = true,
                 qber = qber,
                 confidence = confidence,
                 detectionMethod = "BB84-QBER-Analysis",
-                message = "⚠️ Eavesdropping detected! QBER: ${String.format("%.1f", qber * 100)}%"
+                message = "Eavesdropping detected. QBER: ${String.format("%.1f", qber * 100)}%"
             )
         } else {
             // Eve attempted but not detected, or no Eve

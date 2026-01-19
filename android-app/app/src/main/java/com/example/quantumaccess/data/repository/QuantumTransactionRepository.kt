@@ -120,13 +120,13 @@ class QuantumTransactionRepository(
             // Check if Eve was detected
             if (eveResult.isIntercepted) {
                 // ABORT! Eavesdropping detected
-                Log.e(TAG, "🚨 EAVESDROPPING DETECTED! ${eveResult.message}")
+                Log.e(TAG, "EAVESDROPPING DETECTED! ${eveResult.message}")
                 
                 onProgress(
                     QuantumProcessStep(
                         progress = 0.6f,
-                        status = "⚠️ Eavesdropping Detected!",
-                        detail = "QBER: ${String.format("%.1f", eveResult.qber * 100)}% (Threshold: 11%) - Transaction ABORTED",
+                        status = "Eavesdropping Detected",
+                        detail = "QBER: ${String.format("%.1f", eveResult.qber * 100)}% exceeds threshold (11%). Transaction aborted for security.",
                         isTerminal = true
                     )
                 )
@@ -232,13 +232,10 @@ class QuantumTransactionRepository(
             }
             
             // Step 7: Success
-            val successDetail = buildString {
-                if (quantumKey.isReal) {
-                    append("Quantum-secured with ${quantumKey.provider} (Real QKD)")
-                } else {
-                    append("Completed with simulation (Configure QKD for real keys)")
-                }
-                append(" • No eavesdropping detected ✓")
+            val successDetail = if (quantumKey.isReal) {
+                "Transaction secured using ${quantumKey.provider} quantum key distribution. No eavesdropping detected."
+            } else {
+                "Transaction completed successfully. No eavesdropping detected."
             }
             
             onProgress(

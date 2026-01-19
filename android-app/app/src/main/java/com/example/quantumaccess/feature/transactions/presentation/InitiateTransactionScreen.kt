@@ -317,13 +317,13 @@ private fun EveSimulationToggle(
 				Spacer(modifier = Modifier.width(10.dp))
 				Column {
 					Text(
-						text = "🕵️ Eve Simulation",
+						text = "Eve Simulation",
 						style = MaterialTheme.typography.bodyMedium,
 						fontWeight = FontWeight.SemiBold,
 						color = if (isEnabled) AlertRed else NightBlack
 					)
 					Text(
-						text = if (isEnabled) "Eavesdropping active (for testing)" else "Test interception detection",
+						text = if (isEnabled) "Eavesdropping simulation active" else "Test interception detection",
 						style = MaterialTheme.typography.bodySmall,
 						color = Color.Gray
 					)
