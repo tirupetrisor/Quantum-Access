@@ -54,7 +54,8 @@ class QuantumAccessApplication : Application() {
             transactionDao = transactionDao,
             quantumKeyDao = quantumKeyDao,
             remoteDataSource = remoteTransactionDS,
-            supabase = supabaseClient
+            supabase = supabaseClient,
+            prefs = prefs
         )
 
         // 4. Initialize Service Locator (Legacy bridge)

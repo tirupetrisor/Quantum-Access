@@ -7,6 +7,8 @@ import com.example.quantumaccess.data.local.dao.QuantumKeyDao
 import com.example.quantumaccess.data.local.dao.TransactionDao
 import com.example.quantumaccess.data.local.entities.LocalTransactionEntity
 import com.example.quantumaccess.data.local.entities.QuantumKeyEntity
+import com.example.quantumaccess.data.local.SecurePrefsManager
+import com.example.quantumaccess.data.quantum.EveDetector
 import com.example.quantumaccess.data.quantum.QKDProvider
 import com.example.quantumaccess.data.quantum.QKDService
 import com.example.quantumaccess.data.quantum.QuantumKeyData
@@ -32,7 +34,8 @@ class QuantumTransactionRepository(
     private val transactionDao: TransactionDao,
     private val quantumKeyDao: QuantumKeyDao,
     private val remoteDataSource: RemoteTransactionDataSource,
-    private val supabase: SupabaseClient
+    private val supabase: SupabaseClient,
+    private val prefs: SecurePrefsManager
 ) {
     
     private val qkdService: QKDService by lazy {
@@ -44,6 +47,8 @@ class QuantumTransactionRepository(
         }
         QKDService(apiKey, provider)
     }
+    
+    private val eveDetector = EveDetector()
 
     /**
      * Process quantum transaction with real QKD
@@ -93,21 +98,73 @@ class QuantumTransactionRepository(
             val quantumKey = quantumKeyResult.getOrThrow()
             delay(600)
             
-            // Step 3: Quantum entanglement (simulate verification)
+            // Step 3: Eve Detection - Check for eavesdropping
             onProgress(
                 QuantumProcessStep(
-                    progress = 0.6f,
-                    status = "Quantum Entanglement",
-                    detail = "Verifying key integrity (Entropy: ${String.format("%.2f", quantumKey.quantumEntropy * 100)}%)...",
+                    progress = 0.5f,
+                    status = "Eve Detection",
+                    detail = "Scanning for eavesdropping attempts...",
                     isTerminal = false
                 )
             )
+            
+            val isEveEnabled = prefs.isEveSimulationEnabled()
+            val eveResult = eveDetector.detectEavesdropping(
+                quantumEntropy = quantumKey.quantumEntropy,
+                keySize = quantumKey.keySize,
+                isEveEnabled = isEveEnabled
+            )
+            
             delay(700)
             
-            // Step 4: Encrypt and send transaction
+            // Check if Eve was detected
+            if (eveResult.isIntercepted) {
+                // ABORT! Eavesdropping detected
+                Log.e(TAG, "🚨 EAVESDROPPING DETECTED! ${eveResult.message}")
+                
+                onProgress(
+                    QuantumProcessStep(
+                        progress = 0.6f,
+                        status = "⚠️ Eavesdropping Detected!",
+                        detail = "QBER: ${String.format("%.1f", eveResult.qber * 100)}% (Threshold: 11%) - Transaction ABORTED",
+                        isTerminal = true
+                    )
+                )
+                
+                // Save intercepted transaction for audit
+                val interceptedTransaction = LocalTransactionEntity(
+                    transactionId = transactionId,
+                    userId = userId,
+                    amount = amount,
+                    beneficiary = beneficiary,
+                    mode = "QUANTUM",
+                    status = "ABORTED",
+                    intercepted = true,
+                    lastUpdated = Instant.now(),
+                    createdAt = Instant.now()
+                )
+                transactionDao.insert(interceptedTransaction)
+                
+                return@withContext Result.failure(
+                    SecurityException("Eavesdropping detected! QBER: ${eveResult.qber * 100}%")
+                )
+            }
+            
+            // Step 4: Quantum entanglement verification (passed Eve check)
             onProgress(
                 QuantumProcessStep(
-                    progress = 0.7f,
+                    progress = 0.65f,
+                    status = "Quantum Entanglement Verified",
+                    detail = "Key secure (Entropy: ${String.format("%.2f", quantumKey.quantumEntropy * 100)}%, QBER: ${String.format("%.1f", eveResult.qber * 100)}%)",
+                    isTerminal = false
+                )
+            )
+            delay(600)
+            
+            // Step 5: Encrypt and send transaction
+            onProgress(
+                QuantumProcessStep(
+                    progress = 0.75f,
                     status = "Encrypting Transaction",
                     detail = "Applying quantum-secured encryption...",
                     isTerminal = false
@@ -131,10 +188,10 @@ class QuantumTransactionRepository(
             // Save transaction to local database FIRST
             transactionDao.insert(transactionEntity)
             
-            // Step 5: Store quantum key metadata (AFTER transaction due to foreign key)
+            // Step 6: Store quantum key metadata (AFTER transaction due to foreign key)
             onProgress(
                 QuantumProcessStep(
-                    progress = 0.85f,
+                    progress = 0.9f,
                     status = "Storing Quantum Key",
                     detail = "Saving quantum metadata...",
                     isTerminal = false
@@ -174,16 +231,21 @@ class QuantumTransactionRepository(
                 Log.w(TAG, "Failed to sync to remote, continuing with local storage", e)
             }
             
-            // Step 6: Success
+            // Step 7: Success
+            val successDetail = buildString {
+                if (quantumKey.isReal) {
+                    append("Quantum-secured with ${quantumKey.provider} (Real QKD)")
+                } else {
+                    append("Completed with simulation (Configure QKD for real keys)")
+                }
+                append(" • No eavesdropping detected ✓")
+            }
+            
             onProgress(
                 QuantumProcessStep(
                     progress = 1.0f,
                     status = "Transaction Complete",
-                    detail = if (quantumKey.isReal) {
-                        "Quantum-secured with ${quantumKey.provider} (Real QKD)"
-                    } else {
-                        "Completed with simulation (Configure QKD for real keys)"
-                    },
+                    detail = successDetail,
                     isTerminal = true
                 )
             )
