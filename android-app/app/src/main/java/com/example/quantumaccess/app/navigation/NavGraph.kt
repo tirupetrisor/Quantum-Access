@@ -20,6 +20,7 @@ import com.example.quantumaccess.feature.auth.presentation.RegisterScreen
 import com.example.quantumaccess.feature.dashboard.presentation.DashboardScreen
 import com.example.quantumaccess.feature.history.presentation.TransactionHistoryScreen
 import com.example.quantumaccess.feature.location.presentation.LocationVerificationScreen
+import com.example.quantumaccess.feature.quantum.presentation.QuantumChannelVisualizerScreen
 import com.example.quantumaccess.feature.splash.presentation.SplashScreen
 import com.example.quantumaccess.feature.transactions.presentation.InitiateTransactionScreen
 import com.example.quantumaccess.feature.transactions.presentation.NormalTransactionProcessingScreen
@@ -199,6 +200,13 @@ fun AppNavGraph() {
 					}
 				},
 				onLogout = onLogoutAction
+			)
+		}
+		composable(Routes.QuantumVisualizer) {
+			QuantumChannelVisualizerScreen(
+				onBack = {
+					navController.popBackStack()
+				}
 			)
 		}
 		composable(Routes.TransactionMode) {

@@ -3,8 +3,13 @@ package com.example.quantumaccess.feature.transactions.presentation
 import android.util.Log
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -44,8 +49,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontFamily
@@ -263,6 +270,19 @@ private fun QuantumTransactionCard(
     progress: Float,
     currentStep: QuantumProcessStep
 ) {
+    // Track photon count based on progress
+    var photonCount by remember { mutableIntStateOf(0) }
+    
+    LaunchedEffect(progress) {
+        if (progress > 0.3f && progress < 0.9f && !currentStep.isTerminal) {
+            // Generate photons during quantum key generation
+            while (photonCount < 50) {
+                photonCount++
+                delay(80)
+            }
+        }
+    }
+    
     Surface(
         shape = RoundedCornerShape(28.dp),
         color = Color(0xFF202E80).copy(alpha = 0.9f),
@@ -284,6 +304,19 @@ private fun QuantumTransactionCard(
             Spacer(modifier = Modifier.height(14.dp))
             TransactionDetailRow(label = "Quantum ID", value = quantumId, monospaced = true)
             Spacer(modifier = Modifier.height(24.dp))
+            
+            // Live Quantum Channel Visualization
+            if (progress > 0.2f && progress < 0.95f && !currentStep.isTerminal) {
+                LiveQuantumChannelVisualizer(
+                    currentStep = currentStep,
+                    photonCount = photonCount,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp)
+                )
+                Spacer(modifier = Modifier.height(20.dp))
+            }
+            
             QuantumProgressBar(progress = progress)
             Spacer(modifier = Modifier.height(24.dp))
             QuantumStatusMessage(step = currentStep)
@@ -417,6 +450,293 @@ private fun QuantumStatusMessage(step: QuantumProcessStep) {
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
+        }
+    }
+}
+
+@Composable
+private fun LiveQuantumChannelVisualizer(
+    currentStep: QuantumProcessStep,
+    photonCount: Int,
+    modifier: Modifier = Modifier
+) {
+    // Detect if Eve is present based on step status
+    val isEveDetectionStep = currentStep.status.contains("Eve", ignoreCase = true) ||
+                             currentStep.status.contains("Eavesdropping", ignoreCase = true)
+    val isEveDetected = currentStep.status.contains("Detected", ignoreCase = true) &&
+                        isEveDetectionStep
+    
+    // Animation for pulsing effect
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulseAlpha"
+    )
+    
+    // Photon animation
+    val photonProgress by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = androidx.compose.animation.core.LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "photonProgress"
+    )
+    
+    Column(
+        modifier = modifier
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFF152059).copy(alpha = 0.6f),
+                        Color(0xFF1A237E).copy(alpha = 0.4f)
+                    )
+                ),
+                RoundedCornerShape(16.dp)
+            )
+            .padding(18.dp)
+    ) {
+        // Title
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = if (isEveDetectionStep) "🔍 Eve Detection" else "🔬 Quantum Channel",
+                color = if (isEveDetected) Color(0xFFFF6B6B) else Color(0xFF00D9FF),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                fontSize = 15.sp
+            )
+            
+            // Photon counter badge
+            Surface(
+                color = Color(0xFF00D9FF).copy(alpha = 0.15f),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(
+                    text = "$photonCount photons",
+                    color = Color(0xFF00D9FF),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                    fontSize = 12.sp
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(14.dp))
+        
+        // Canvas for quantum channel
+        Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(100.dp)
+        ) {
+            val canvasWidth = size.width
+            val canvasHeight = size.height
+            
+            // Alice position (left)
+            val aliceX = 50f
+            val aliceY = canvasHeight / 2
+            
+            // Eve position (middle, if detection step)
+            val eveX = canvasWidth / 2
+            val eveY = canvasHeight / 2
+            
+            // Bob position (right)
+            val bobX = canvasWidth - 50f
+            val bobY = canvasHeight / 2
+            
+            // Draw quantum channel (line)
+            drawLine(
+                color = Color(0xFF2A3F5F),
+                start = Offset(aliceX, aliceY),
+                end = Offset(bobX, bobY),
+                strokeWidth = 2f
+            )
+            
+            // Draw Alice (sender)
+            drawCircle(
+                color = Color(0xFF00D9FF),
+                radius = 20f,
+                center = Offset(aliceX, aliceY),
+                alpha = pulseAlpha * 0.3f
+            )
+            drawCircle(
+                color = Color(0xFF00D9FF),
+                radius = 15f,
+                center = Offset(aliceX, aliceY)
+            )
+            
+            // Draw Eve (if detection step)
+            if (isEveDetectionStep) {
+                val eveColor = if (isEveDetected) Color(0xFFFF3D71) else Color(0xFFFFA726)
+                val eveAlpha = if (isEveDetected) 0.8f else pulseAlpha * 0.5f
+                
+                drawCircle(
+                    color = eveColor,
+                    radius = 20f,
+                    center = Offset(eveX, eveY),
+                    alpha = eveAlpha * 0.3f
+                )
+                drawCircle(
+                    color = eveColor,
+                    radius = 15f,
+                    center = Offset(eveX, eveY),
+                    alpha = eveAlpha
+                )
+            }
+            
+            // Draw Bob (receiver)
+            drawCircle(
+                color = Color(0xFF4CAF50),
+                radius = 20f,
+                center = Offset(bobX, bobY),
+                alpha = pulseAlpha * 0.3f
+            )
+            drawCircle(
+                color = Color(0xFF4CAF50),
+                radius = 15f,
+                center = Offset(bobX, bobY)
+            )
+            
+            // Draw photons in transit (show 3-5 photons at different positions)
+            for (i in 0..3) {
+                val offset = (i * 0.25f + photonProgress) % 1f
+                val photonX = aliceX + (bobX - aliceX) * offset
+                val photonY = aliceY
+                
+                // Alternate colors for visual variety
+                val photonColor = if (i % 2 == 0) Color(0xFF00D9FF) else Color(0xFFBB86FC)
+                
+                // Draw photon
+                drawCircle(
+                    color = photonColor,
+                    radius = 8f,
+                    center = Offset(photonX, photonY),
+                    alpha = 0.8f
+                )
+                
+                // Draw polarization indicator
+                val rotation = if (i % 2 == 0) 0f else 45f
+                rotate(
+                    degrees = rotation,
+                    pivot = Offset(photonX, photonY)
+                ) {
+                    drawLine(
+                        color = Color.White,
+                        start = Offset(photonX - 5f, photonY),
+                        end = Offset(photonX + 5f, photonY),
+                        strokeWidth = 2f,
+                        alpha = 0.9f
+                    )
+                }
+                
+                // Show Eve interception effect
+                if (isEveDetectionStep && offset > 0.4f && offset < 0.6f) {
+                    drawCircle(
+                        color = Color(0xFFFF3D71),
+                        radius = 15f,
+                        center = Offset(photonX, photonY),
+                        alpha = if (isEveDetected) 0.4f else 0.2f
+                    )
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        // Status row with better visibility
+        if (isEveDetectionStep) {
+            Surface(
+                color = if (isEveDetected) 
+                    Color(0xFFFF3D71).copy(alpha = 0.2f) 
+                else 
+                    Color(0xFF4CAF50).copy(alpha = 0.15f),
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = if (isEveDetected) "Eavesdropping Detected" else "Channel Secure",
+                            color = if (isEveDetected) Color(0xFFFF6B6B) else Color(0xFF4CAF50),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                        Text(
+                            text = if (isEveDetected) "Attack in progress" else "No threats detected",
+                            color = if (isEveDetected) 
+                                Color(0xFFFF6B6B).copy(alpha = 0.7f) 
+                            else 
+                                Color(0xFF4CAF50).copy(alpha = 0.7f),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontSize = 11.sp
+                        )
+                    }
+                    
+                    Surface(
+                        color = if (isEveDetected) 
+                            Color(0xFFFF3D71).copy(alpha = 0.3f)
+                        else 
+                            Color(0xFF4CAF50).copy(alpha = 0.25f),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            text = if (isEveDetected) "QBER > 11%" else "QBER < 11%",
+                            color = if (isEveDetected) Color(0xFFFF6B6B) else Color(0xFF4CAF50),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            fontSize = 13.sp
+                        )
+                    }
+                }
+            }
+        } else {
+            // Simple direction indicator when not in Eve detection
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Alice",
+                    color = Color(0xFF00D9FF),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 12.sp
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "→",
+                    color = Color(0xFFB3C6FF),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Bob",
+                    color = Color(0xFF4CAF50),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 12.sp
+                )
+            }
         }
     }
 }

@@ -12,5 +12,6 @@ object Routes {
 	const val TransactionMode = "transaction_mode"
 	const val NormalProcessing = "normal_processing"
 	const val QuantumProcessing = "quantum_processing"
+	const val QuantumVisualizer = "quantum_visualizer"
 }
 
