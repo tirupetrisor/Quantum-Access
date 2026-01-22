@@ -25,6 +25,7 @@ import com.example.quantumaccess.feature.transactions.presentation.InitiateTrans
 import com.example.quantumaccess.feature.transactions.presentation.NormalTransactionProcessingScreen
 import com.example.quantumaccess.feature.transactions.presentation.QuantumTransactionProcessingScreen
 import com.example.quantumaccess.feature.transactions.presentation.TransactionMode
+import com.example.quantumaccess.domain.model.TransactionScenario
 import com.example.quantumaccess.viewmodel.LoginViewModel
 import com.example.quantumaccess.viewmodel.RegisterViewModel
 import kotlin.random.Random
@@ -200,21 +201,19 @@ fun AppNavGraph() {
 		}
 		composable(Routes.TransactionMode) {
 			InitiateTransactionScreen(
-				onContinue = { amount, beneficiary, mode ->
+				onContinue = { amount, beneficiary, patientId, accessReason, mode, scenario, simulateAttack ->
+					val amt = amount?.takeIf { it.isNotBlank() } ?: "0"
+					val ben = beneficiary?.takeIf { it.isNotBlank() } ?: ""
+					val pat = patientId?.takeIf { it.isNotBlank() } ?: ""
+					val reason = accessReason?.takeIf { it.isNotBlank() } ?: ""
 					when (mode) {
 						TransactionMode.NORMAL -> {
-							val normalizedAmount = amount.ifBlank { "€1,250.00" }
-							val normalizedBeneficiary = beneficiary.ifBlank { "John D. – Quantum Savings" }
-							val route =
-								"${Routes.NormalProcessing}?amount=${Uri.encode(normalizedAmount)}&beneficiary=${Uri.encode(normalizedBeneficiary)}"
+							val route = "${Routes.NormalProcessing}?amount=${Uri.encode(amt)}&beneficiary=${Uri.encode(ben)}&patientId=${Uri.encode(pat)}&accessReason=${Uri.encode(reason)}&scenario=${scenario.name}&simulateAttack=$simulateAttack"
 							navController.navigate(route)
 						}
 						TransactionMode.QUANTUM -> {
-							val normalizedAmount = amount.ifBlank { "€2,450.00" }
-							val normalizedBeneficiary = beneficiary.ifBlank { "TechCorp Solutions SRL" }
 							val quantumId = generateQuantumId()
-							val route =
-								"${Routes.QuantumProcessing}?amount=${Uri.encode(normalizedAmount)}&beneficiary=${Uri.encode(normalizedBeneficiary)}&quantumId=${Uri.encode(quantumId)}"
+							val route = "${Routes.QuantumProcessing}?amount=${Uri.encode(amt)}&beneficiary=${Uri.encode(ben)}&patientId=${Uri.encode(pat)}&accessReason=${Uri.encode(reason)}&quantumId=${Uri.encode(quantumId)}&scenario=${scenario.name}&simulateAttack=$simulateAttack"
 							navController.navigate(route)
 						}
 					}
@@ -222,24 +221,29 @@ fun AppNavGraph() {
 			)
 		}
 		composable(
-			route = "${Routes.NormalProcessing}?amount={amount}&beneficiary={beneficiary}",
+			route = "${Routes.NormalProcessing}?amount={amount}&beneficiary={beneficiary}&patientId={patientId}&accessReason={accessReason}&scenario={scenario}&simulateAttack={simulateAttack}",
 			arguments = listOf(
-				navArgument("amount") {
-					type = NavType.StringType
-					defaultValue = "€1,250.00"
-				},
-				navArgument("beneficiary") {
-					type = NavType.StringType
-					defaultValue = "John D. – Quantum Savings"
-				}
+				navArgument("amount") { type = NavType.StringType; defaultValue = "0" },
+				navArgument("beneficiary") { type = NavType.StringType; defaultValue = "" },
+				navArgument("patientId") { type = NavType.StringType; defaultValue = "" },
+				navArgument("accessReason") { type = NavType.StringType; defaultValue = "" },
+				navArgument("scenario") { type = NavType.StringType; defaultValue = "BANKING_PAYMENT" },
+				navArgument("simulateAttack") { type = NavType.BoolType; defaultValue = false }
 			)
 		) { backStackEntry ->
-			val amountArg = backStackEntry.arguments?.getString("amount").orEmpty().ifBlank { "€1,250.00" }
-			val beneficiaryArg =
-				backStackEntry.arguments?.getString("beneficiary").orEmpty().ifBlank { "John D. – Quantum Savings" }
+			val amountArg = backStackEntry.arguments?.getString("amount").orEmpty()
+			val beneficiaryArg = backStackEntry.arguments?.getString("beneficiary").orEmpty()
+			val patientIdArg = backStackEntry.arguments?.getString("patientId").orEmpty()
+			val accessReasonArg = backStackEntry.arguments?.getString("accessReason").orEmpty()
+			val scenarioArg = backStackEntry.arguments?.getString("scenario") ?: "BANKING_PAYMENT"
+			val simulateAttackArg = backStackEntry.arguments?.getBoolean("simulateAttack") ?: false
 			NormalTransactionProcessingScreen(
 				amount = amountArg,
 				beneficiary = beneficiaryArg,
+				patientId = patientIdArg,
+				accessReason = accessReasonArg,
+				scenario = scenarioArg,
+				simulateAttack = simulateAttackArg,
 				onReturnToDashboard = {
 					val popped = navController.popBackStack(Routes.Dashboard, inclusive = false)
 					if (!popped) {
@@ -252,31 +256,32 @@ fun AppNavGraph() {
 			)
 		}
 		composable(
-			route = "${Routes.QuantumProcessing}?amount={amount}&beneficiary={beneficiary}&quantumId={quantumId}",
+			route = "${Routes.QuantumProcessing}?amount={amount}&beneficiary={beneficiary}&patientId={patientId}&accessReason={accessReason}&quantumId={quantumId}&scenario={scenario}&simulateAttack={simulateAttack}",
 			arguments = listOf(
-				navArgument("amount") {
-					type = NavType.StringType
-					defaultValue = "€2,450.00"
-				},
-				navArgument("beneficiary") {
-					type = NavType.StringType
-					defaultValue = "TechCorp Solutions SRL"
-				},
-				navArgument("quantumId") {
-					type = NavType.StringType
-					defaultValue = "#QTX-7F2A-8B91"
-				}
+				navArgument("amount") { type = NavType.StringType; defaultValue = "0" },
+				navArgument("beneficiary") { type = NavType.StringType; defaultValue = "" },
+				navArgument("patientId") { type = NavType.StringType; defaultValue = "" },
+				navArgument("accessReason") { type = NavType.StringType; defaultValue = "" },
+				navArgument("quantumId") { type = NavType.StringType; defaultValue = "#QTX-7F2A-8B91" },
+				navArgument("scenario") { type = NavType.StringType; defaultValue = "BANKING_PAYMENT" },
+				navArgument("simulateAttack") { type = NavType.BoolType; defaultValue = false }
 			)
 		) { backStackEntry ->
-			val amountArg = backStackEntry.arguments?.getString("amount").orEmpty().ifBlank { "€2,450.00" }
-			val beneficiaryArg =
-				backStackEntry.arguments?.getString("beneficiary").orEmpty().ifBlank { "TechCorp Solutions SRL" }
-			val quantumIdArg =
-				backStackEntry.arguments?.getString("quantumId").orEmpty().ifBlank { "#QTX-7F2A-8B91" }
+			val amountArg = backStackEntry.arguments?.getString("amount").orEmpty()
+			val beneficiaryArg = backStackEntry.arguments?.getString("beneficiary").orEmpty()
+			val patientIdArg = backStackEntry.arguments?.getString("patientId").orEmpty()
+			val accessReasonArg = backStackEntry.arguments?.getString("accessReason").orEmpty()
+			val quantumIdArg = backStackEntry.arguments?.getString("quantumId").orEmpty().ifBlank { "#QTX-7F2A-8B91" }
+			val scenarioArg = backStackEntry.arguments?.getString("scenario") ?: "BANKING_PAYMENT"
+			val simulateAttackArg = backStackEntry.arguments?.getBoolean("simulateAttack") ?: false
 			QuantumTransactionProcessingScreen(
 				amount = amountArg,
 				beneficiary = beneficiaryArg,
+				patientId = patientIdArg,
+				accessReason = accessReasonArg,
 				quantumId = quantumIdArg,
+				scenario = scenarioArg,
+				simulateAttack = simulateAttackArg,
 				onReturnToDashboard = {
 					val popped = navController.popBackStack(Routes.Dashboard, inclusive = false)
 					if (!popped) {

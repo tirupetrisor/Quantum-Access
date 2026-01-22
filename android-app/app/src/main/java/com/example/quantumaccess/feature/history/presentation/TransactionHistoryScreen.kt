@@ -79,6 +79,7 @@ import com.example.quantumaccess.data.sample.RepositoryProvider
 import com.example.quantumaccess.domain.model.TransactionChannel
 import com.example.quantumaccess.domain.model.TransactionDirection
 import com.example.quantumaccess.domain.model.TransactionHistoryEntry
+import com.example.quantumaccess.domain.model.TransactionScenario
 import com.example.quantumaccess.domain.model.TransactionSecurityState
 import com.example.quantumaccess.domain.repository.TransactionRepository
 import kotlinx.coroutines.launch
@@ -91,6 +92,7 @@ import android.app.Activity
 import com.example.quantumaccess.core.util.findActivity
 
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.widthIn
 
 private const val HISTORY_TAG = "TransactionHistoryScreen"
 
@@ -356,14 +358,21 @@ private fun TransactionHistoryCard(
 						Surface(
 							color = uiModel.badgeBackground,
 							shape = RoundedCornerShape(50),
-							shadowElevation = 0.dp
+							shadowElevation = 0.dp,
+							modifier = Modifier.width(70.dp)
 						) {
 							Text(
 								text = uiModel.badgeLabel,
 								color = uiModel.badgeTextColor,
 								style = MaterialTheme.typography.labelSmall,
 								fontWeight = FontWeight.Medium,
-								modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+								maxLines = 1,
+								overflow = TextOverflow.Visible,
+								softWrap = false,
+								textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+								modifier = Modifier
+									.fillMaxWidth()
+									.padding(horizontal = 10.dp, vertical = 4.dp)
 							)
 						}
 						Box(
@@ -401,6 +410,7 @@ private fun TransactionHistoryCard(
 			Spacer(modifier = Modifier.height(12.dp))
 			TransactionRecipientRow(
 				recipient = uiModel.recipientName,
+				isMedical = entry.scenario == TransactionScenario.MEDICAL_RECORD_ACCESS,
 				onDuplicate = onDuplicate
 			)
 		}
@@ -410,6 +420,7 @@ private fun TransactionHistoryCard(
 @Composable
 private fun TransactionRecipientRow(
 	recipient: String,
+	isMedical: Boolean,
 	onDuplicate: () -> Unit
 ) {
 	Row(
@@ -422,7 +433,7 @@ private fun TransactionRecipientRow(
 			verticalArrangement = Arrangement.spacedBy(2.dp)
 		) {
 			Text(
-				text = "Sent to",
+				text = if (isMedical) "Access for" else "Sent to",
 				color = Slate600,
 				style = MaterialTheme.typography.labelSmall,
 				fontWeight = FontWeight.Medium
@@ -431,7 +442,7 @@ private fun TransactionRecipientRow(
 				text = recipient,
 				color = NightBlack,
 				style = MaterialTheme.typography.bodyMedium,
-				maxLines = 1,
+				maxLines = 2,
 				overflow = TextOverflow.Ellipsis
 			)
 		}
@@ -444,7 +455,7 @@ private fun TransactionRecipientRow(
 			)
 			Spacer(modifier = Modifier.width(6.dp))
 			Text(
-				text = "Duplicate",
+				text = "Repeat",
 				color = DeepBlue,
 				style = MaterialTheme.typography.labelMedium,
 				fontWeight = FontWeight.SemiBold
@@ -478,9 +489,14 @@ private data class TransactionHistoryUiModel(
 )
 
 private fun TransactionHistoryEntry.toUiModel(): TransactionHistoryUiModel {
-	val amountColor = when (direction) {
-		TransactionDirection.CREDIT -> Color(0xFF059669)
-		TransactionDirection.DEBIT -> NightBlack
+	val isMedical = scenario == TransactionScenario.MEDICAL_RECORD_ACCESS
+	
+	// For medical we don't show amount, but "Access"
+	val displayAmount = if (isMedical) "Access" else amountFormatted
+	val amountColor = when {
+		isMedical -> DeepBlue
+		direction == TransactionDirection.CREDIT -> Color(0xFF059669)
+		else -> NightBlack
 	}
 	val badgeLabel = when (channel) {
 		TransactionChannel.QUANTUM -> "Quantum"
@@ -509,23 +525,27 @@ private fun TransactionHistoryEntry.toUiModel(): TransactionHistoryUiModel {
 		TransactionSecurityState.NORMAL -> Icons.Outlined.Info
 		TransactionSecurityState.ALERT -> Icons.Outlined.ReportProblem
 	}
+	// For medical we use shield icon
 	val avatarIcon = when {
 		securityState == TransactionSecurityState.ALERT -> Icons.Rounded.Warning
+		isMedical -> Icons.Rounded.Shield // Medical record
 		channel == TransactionChannel.QUANTUM -> Icons.Rounded.Shield
 		else -> Icons.Rounded.AccountBalance
 	}
 	val avatarBackground = when {
 		securityState == TransactionSecurityState.ALERT -> AlertRedDark.copy(alpha = 0.15f)
+		isMedical -> Color(0xFFE8F5E9) // Light green for medical
 		channel == TransactionChannel.QUANTUM -> SecureGreen.copy(alpha = 0.16f)
 		else -> Color(0xFFE2E8FF)
 	}
 	val avatarTint = when {
 		securityState == TransactionSecurityState.ALERT -> AlertRedDark
+		isMedical -> Color(0xFF2E7D32) // Green for medical
 		channel == TransactionChannel.QUANTUM -> SecureGreen
 		else -> DeepBlue
 	}
 	return TransactionHistoryUiModel(
-		amount = amountFormatted,
+		amount = displayAmount,
 		amountColor = amountColor,
 		badgeLabel = badgeLabel,
 		badgeBackground = badgeBackground,

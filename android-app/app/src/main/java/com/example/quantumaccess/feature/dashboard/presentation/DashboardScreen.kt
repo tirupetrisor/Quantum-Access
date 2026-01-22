@@ -50,6 +50,9 @@ import com.example.quantumaccess.core.designsystem.theme.Slate800
 import com.example.quantumaccess.core.designsystem.theme.Steel200
 import com.example.quantumaccess.core.designsystem.theme.Steel300
 import com.example.quantumaccess.core.designsystem.theme.Steel300 as Steel300Color
+import com.example.quantumaccess.data.sample.RepositoryProvider
+import com.example.quantumaccess.domain.model.SecurityScoreSummary
+import com.example.quantumaccess.domain.repository.TransactionRepository
 
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.platform.LocalView
@@ -67,7 +70,8 @@ fun DashboardScreen(
 	onInitiateTransaction: () -> Unit = {},
 	onOpenHistory: () -> Unit = {},
 	onOpenAnalytics: () -> Unit = {},
-	onLogoutConfirm: () -> Unit = {}
+	onLogoutConfirm: () -> Unit = {},
+	transactionRepository: TransactionRepository = RepositoryProvider.transactionRepository
 ) {
     // Force status bar icons to be light (visible on blue background)
     val view = LocalView.current
@@ -80,17 +84,21 @@ fun DashboardScreen(
             }
         }
     }
+    
+    // Get security score summary
+    val scoreSummary = remember(transactionRepository) { 
+        transactionRepository.getSecurityScoreSummary() 
+    }
 
 	Box(
 		modifier = modifier
 			.fillMaxSize()
 			.background(Color.White)
-            .navigationBarsPadding() // Respect system navigation bar
+            .navigationBarsPadding()
 	) {
 		Column(
 			modifier = Modifier
 				.fillMaxSize()
-                // .verticalScroll(rememberScrollState()) REMOVED: Scroll is now handled inside the middle column
 		) {
 			QuantumTopBar(
 				title = "QuantumAccess",
@@ -101,11 +109,18 @@ fun DashboardScreen(
 			Column(
 				modifier = Modifier
 					.padding(horizontal = 20.dp)
-                    .weight(1f) // Allow this column to take up remaining space
+                    .weight(1f)
                     .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()), // Scroll internally if needed
-				verticalArrangement = Arrangement.Center
+                    .verticalScroll(rememberScrollState()),
+				verticalArrangement = Arrangement.Top
 			) {
+				Spacer(modifier = Modifier.height(16.dp))
+				
+				// Security Score Card
+				SecurityScoreCard(scoreSummary = scoreSummary)
+				
+				Spacer(modifier = Modifier.height(20.dp))
+				
 				DashboardCard(
 					title = "Initiate Transaction",
 					subtitle = "Start a new secure payment",
@@ -120,7 +135,7 @@ fun DashboardScreen(
 				Spacer(modifier = Modifier.height(16.dp))
 				DashboardCard(
 					title = "Transaction History",
-					subtitle = "View your recent operations",
+					subtitle = "View recent operations",
 					leading = {
 						IconBubble(iconTint = Slate700, background = Cloud200) {
 							Icon(imageVector = Icons.Filled.History, contentDescription = null, tint = Slate700)
@@ -131,8 +146,8 @@ fun DashboardScreen(
 				)
 				Spacer(modifier = Modifier.height(16.dp))
 				DashboardCard(
-					title = "Security Analytics",
-					subtitle = "See insights on Quantum vs\nNormal transactions",
+					title = "Security Analysis",
+					subtitle = "View Quantum vs\nNormal comparison",
 					leading = {
 						IconBubble(iconTint = Slate700, background = Cloud200) {
 							Icon(imageVector = Icons.Filled.ShowChart, contentDescription = null, tint = Slate700)
@@ -141,9 +156,10 @@ fun DashboardScreen(
 					onClick = onOpenAnalytics,
 					borderColor = BorderLight
 				)
+				
+				Spacer(modifier = Modifier.height(16.dp))
 			}
             
-            // Spacer removed as weight(1f) in middle column handles spacing
 			Footer()
 		}
 	}
