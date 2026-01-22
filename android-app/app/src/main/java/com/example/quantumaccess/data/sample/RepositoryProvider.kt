@@ -1,5 +1,6 @@
 package com.example.quantumaccess.data.sample
 
+import com.example.quantumaccess.data.repository.QuantumTransactionRepository
 import com.example.quantumaccess.domain.repository.DeviceRepository
 import com.example.quantumaccess.domain.repository.TransactionRepository
 
@@ -14,12 +15,17 @@ object RepositoryProvider {
         
     lateinit var deviceRepository: DeviceRepository
         private set
+    
+    lateinit var quantumTransactionRepository: QuantumTransactionRepository
+        private set
 
     fun initialize(
         transactionRepo: TransactionRepository,
-        deviceRepo: DeviceRepository
+        deviceRepo: DeviceRepository,
+        quantumRepo: QuantumTransactionRepository
     ) {
         transactionRepository = transactionRepo
         deviceRepository = deviceRepo
+        quantumTransactionRepository = quantumRepo
     }
 }

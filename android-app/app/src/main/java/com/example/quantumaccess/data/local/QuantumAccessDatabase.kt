@@ -5,11 +5,13 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import com.example.quantumaccess.data.local.dao.QuantumKeyDao
 import com.example.quantumaccess.data.local.dao.SessionDao
 import com.example.quantumaccess.data.local.dao.TransactionDao
 import com.example.quantumaccess.data.local.dao.UserDao
 import com.example.quantumaccess.data.local.entities.LocalTransactionEntity
 import com.example.quantumaccess.data.local.entities.LocalUserEntity
+import com.example.quantumaccess.data.local.entities.QuantumKeyEntity
 import com.example.quantumaccess.data.local.entities.SessionEntity
 
 /**
@@ -20,7 +22,8 @@ import com.example.quantumaccess.data.local.entities.SessionEntity
     entities = [
         LocalUserEntity::class,
         SessionEntity::class,
-        LocalTransactionEntity::class
+        LocalTransactionEntity::class,
+        QuantumKeyEntity::class
     ],
     version = 8,
     exportSchema = true
@@ -31,6 +34,7 @@ abstract class QuantumAccessDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
     abstract fun sessionDao(): SessionDao
     abstract fun transactionDao(): TransactionDao
+    abstract fun quantumKeyDao(): QuantumKeyDao
     companion object {
         @Volatile
         private var INSTANCE: QuantumAccessDatabase? = null

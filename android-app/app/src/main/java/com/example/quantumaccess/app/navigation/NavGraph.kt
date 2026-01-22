@@ -20,10 +20,12 @@ import com.example.quantumaccess.feature.auth.presentation.RegisterScreen
 import com.example.quantumaccess.feature.dashboard.presentation.DashboardScreen
 import com.example.quantumaccess.feature.history.presentation.TransactionHistoryScreen
 import com.example.quantumaccess.feature.location.presentation.LocationVerificationScreen
+import com.example.quantumaccess.feature.quantum.presentation.QuantumChannelVisualizerScreen
 import com.example.quantumaccess.feature.splash.presentation.SplashScreen
 import com.example.quantumaccess.feature.transactions.presentation.InitiateTransactionScreen
 import com.example.quantumaccess.feature.transactions.presentation.NormalTransactionProcessingScreen
 import com.example.quantumaccess.feature.transactions.presentation.QuantumTransactionProcessingScreen
+import com.example.quantumaccess.feature.transactions.presentation.QuantumTransactionProcessingScreenV2
 import com.example.quantumaccess.feature.transactions.presentation.TransactionMode
 import com.example.quantumaccess.domain.model.TransactionScenario
 import com.example.quantumaccess.viewmodel.LoginViewModel
@@ -141,13 +143,15 @@ fun AppNavGraph() {
             
 			BiometricLoginScreen(
                 isLoading = uiState.isLoading,
+                errorMessage = uiState.error,
 				onAuthenticate = { vm.onBiometricAuthenticated() },
                 onGoogleSignIn = { idToken ->
                     vm.onGoogleSignInSuccess(idToken)
                 },
                 onLoginWithPassword = { email, password ->
                      vm.login(email, password)
-                }
+                },
+                onClearError = { vm.clearError() }
 			)
 		}
 		composable(Routes.LocationVerification) {
@@ -197,6 +201,13 @@ fun AppNavGraph() {
 					}
 				},
 				onLogout = onLogoutAction
+			)
+		}
+		composable(Routes.QuantumVisualizer) {
+			QuantumChannelVisualizerScreen(
+				onBack = {
+					navController.popBackStack()
+				}
 			)
 		}
 		composable(Routes.TransactionMode) {

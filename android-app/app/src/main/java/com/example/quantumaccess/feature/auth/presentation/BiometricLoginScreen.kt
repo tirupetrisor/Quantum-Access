@@ -63,9 +63,11 @@ import kotlinx.coroutines.launch
 fun BiometricLoginScreen(
 	modifier: Modifier = Modifier,
     isLoading: Boolean = false,
+    errorMessage: String? = null,
 	onAuthenticate: () -> Unit = {},
     onGoogleSignIn: (String?) -> Unit = { _ -> },
-    onLoginWithPassword: (String, String) -> Unit = { _, _ -> onAuthenticate() } // Simplified for now
+    onLoginWithPassword: (String, String) -> Unit = { _, _ -> onAuthenticate() }, // Simplified for now
+    onClearError: () -> Unit = {}
 ) {
 	val context = LocalContext.current
 	val executor = remember { ContextCompat.getMainExecutor(context) }
@@ -110,6 +112,7 @@ fun BiometricLoginScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var showPasswordLogin by remember { mutableStateOf(false) }
+    var localError by remember { mutableStateOf<String?>(null) }
 
 	fun launchBiometric() {
 		val allowed = BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
@@ -251,7 +254,11 @@ fun BiometricLoginScreen(
                     ) {
                         InputField(
                             value = email,
-                            onValueChange = { email = it },
+                            onValueChange = {
+                                email = it
+                                if (localError != null) localError = null
+                                onClearError()
+                            },
                             label = "Email",
                             placeholder = "Enter your email",
                             labelIcon = Icons.Filled.Email
@@ -259,7 +266,11 @@ fun BiometricLoginScreen(
                         Spacer(modifier = Modifier.height(12.dp))
                         InputField(
                             value = password,
-                            onValueChange = { password = it },
+                            onValueChange = {
+                                password = it
+                                if (localError != null) localError = null
+                                onClearError()
+                            },
                             label = "Password",
                             placeholder = "Enter your password",
                             labelIcon = Icons.Filled.Lock,
@@ -268,11 +279,30 @@ fun BiometricLoginScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                         PrimaryActionButton(
                             text = "Log In",
-                            onClick = { onLoginWithPassword(email, password) },
+                            onClick = {
+                                val trimmedEmail = email.trim()
+                                when {
+                                    trimmedEmail.isBlank() || password.isBlank() -> {
+                                        localError = "Please enter both email and password."
+                                    }
+                                    else -> onLoginWithPassword(trimmedEmail, password)
+                                }
+                            },
                             modifier = Modifier.fillMaxWidth(),
                             enabled = !isLoading,
                             loading = isLoading && showPasswordLogin
                         )
+                        val message = localError ?: errorMessage
+                        if (!message.isNullOrBlank()) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = message,
+                                color = Color(0xFFD32F2F),
+                                fontSize = 13.sp,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                     }
                 }
             }

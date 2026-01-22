@@ -33,4 +33,7 @@ interface TransactionDao {
 
     @Query("DELETE FROM local_transactions WHERE userId = :userId")
     suspend fun clearUserData(userId: UUID)
+    
+    @Query("SELECT COUNT(*) FROM local_transactions WHERE mode = :mode")
+    suspend fun getCountByMode(mode: String): Int
 }

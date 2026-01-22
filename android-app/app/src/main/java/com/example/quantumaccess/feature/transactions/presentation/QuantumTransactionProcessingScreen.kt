@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.CircularProgressIndicator
@@ -51,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.quantumaccess.core.designsystem.components.QuantumLogoGradientBadge
 import com.example.quantumaccess.core.designsystem.components.QuantumTopBar
+import com.example.quantumaccess.core.designsystem.theme.AlertRed
 import com.example.quantumaccess.core.designsystem.theme.SecureGreen
 import com.example.quantumaccess.data.sample.RepositoryProvider
 import com.example.quantumaccess.domain.model.QuantumProcessStep
@@ -387,25 +389,36 @@ private fun QuantumProgressBar(progress: Float) {
 @Composable
 private fun QuantumStatusMessage(step: QuantumProcessStep) {
     if (step.isTerminal) {
+        // Detect if it's a failure/error/abort
+        val isFailure = step.status.contains("Failed", ignoreCase = true) ||
+                       step.status.contains("Error", ignoreCase = true) ||
+                       step.status.contains("Aborted", ignoreCase = true) ||
+                       step.status.contains("Detected", ignoreCase = true) // Eve detected
+        
+        val iconColor = if (isFailure) AlertRed else SecureGreen
+        val iconBg = if (isFailure) AlertRed.copy(alpha = 0.2f) else SecureGreen.copy(alpha = 0.2f)
+        val icon = if (isFailure) Icons.Filled.Close else Icons.Rounded.Check
+        val textColor = if (isFailure) Color(0xFFFFB4AB) else Color(0xFFA8FFDE)
+        
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Box(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(SecureGreen.copy(alpha = 0.2f)),
+                    .background(iconBg),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Rounded.Check,
+                    imageVector = icon,
                     contentDescription = null,
-                    tint = SecureGreen,
+                    tint = iconColor,
                     modifier = Modifier.size(20.dp)
                 )
             }
             Spacer(modifier = Modifier.height(10.dp))
             Text(
                 text = step.status,
-                color = Color.White,
+                color = if (isFailure) AlertRed.copy(alpha = 0.9f) else Color.White,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
@@ -414,7 +427,7 @@ private fun QuantumStatusMessage(step: QuantumProcessStep) {
             Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = step.detail,
-                color = Color(0xFFA8FFDE),
+                color = textColor,
                 style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
