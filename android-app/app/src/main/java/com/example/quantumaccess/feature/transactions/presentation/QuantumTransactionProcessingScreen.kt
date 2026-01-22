@@ -56,6 +56,10 @@ import com.example.quantumaccess.core.designsystem.theme.AlertRed
 import com.example.quantumaccess.core.designsystem.theme.SecureGreen
 import com.example.quantumaccess.data.sample.RepositoryProvider
 import com.example.quantumaccess.domain.model.QuantumProcessStep
+import com.example.quantumaccess.domain.model.TransactionChannel
+import com.example.quantumaccess.domain.model.TransactionRequest
+import com.example.quantumaccess.domain.model.TransactionResult
+import com.example.quantumaccess.domain.model.TransactionScenario
 import com.example.quantumaccess.domain.repository.TransactionRepository
 import kotlinx.coroutines.delay
 
@@ -70,9 +74,13 @@ private const val QUANTUM_TRANSACTION_TAG = "QuantumTransactionScreen"
 @Composable
 fun QuantumTransactionProcessingScreen(
     modifier: Modifier = Modifier,
-    amount: String = "€2,450.00",
-    beneficiary: String = "TechCorp Solutions SRL",
+    amount: String = "0",
+    beneficiary: String = "",
+    patientId: String = "",
+    accessReason: String = "",
     quantumId: String = "#QTX-7F2A-8B91",
+    scenario: String = "BANKING_PAYMENT",
+    simulateAttack: Boolean = false,
     onReturnToDashboard: () -> Unit = {},
     onLogout: () -> Unit = {},
     transactionRepository: TransactionRepository = RepositoryProvider.transactionRepository
@@ -101,10 +109,22 @@ fun QuantumTransactionProcessingScreen(
 
     var currentStepIndex by remember { mutableIntStateOf(0) }
     var isCompleted by remember { mutableStateOf(false) }
-    var transactionSaved by remember { mutableStateOf(false) } // Prevent duplicates
+    var transactionSaved by remember { mutableStateOf(false) }
+    var transactionResult by remember { mutableStateOf<TransactionResult?>(null) }
     val progress = remember { Animatable(0f) }
+    
+    // Parse scenario
+    val transactionScenario = remember(scenario) {
+        when (scenario) {
+            "MEDICAL_RECORD_ACCESS" -> TransactionScenario.MEDICAL_RECORD_ACCESS
+            else -> TransactionScenario.BANKING_PAYMENT
+        }
+    }
 
     LaunchedEffect(Unit) {
+        // Set simulate attack flag in repository
+        transactionRepository.simulateAttackEnabled = simulateAttack
+        
         progress.snapTo(0f)
         steps.forEachIndexed { index, step ->
             currentStepIndex = index
@@ -117,18 +137,22 @@ fun QuantumTransactionProcessingScreen(
                 isCompleted = true
                 
                 if (!transactionSaved) {
-                    // Save Quantum Transaction
-                    val cleanAmount = amount.replace("[^\\d.]".toRegex(), "").toDoubleOrNull() ?: 0.0
-
-                    val result = transactionRepository.insertTransaction(
-                        amount = cleanAmount,
-                        mode = "QUANTUM",
-                        status = "SUCCESS",
-                        intercepted = false, // Quantum is secure by definition (in this demo context)
-                        beneficiary = beneficiary
+                    val isMedical = transactionScenario == TransactionScenario.MEDICAL_RECORD_ACCESS
+                    val cleanAmount = amount.replace("[^\\d.]".toRegex(), "").toDoubleOrNull()?.takeIf { it > 0 }
+                    val request = TransactionRequest(
+                        amount = if (isMedical) null else (cleanAmount ?: 0.0),
+                        beneficiary = if (isMedical) null else beneficiary.takeIf { it.isNotBlank() },
+                        patientId = if (isMedical) patientId.takeIf { it.isNotBlank() } else null,
+                        accessReason = if (isMedical) accessReason.takeIf { it.isNotBlank() } else null,
+                        scenario = transactionScenario,
+                        mode = TransactionChannel.QUANTUM,
+                        simulateAttack = simulateAttack
                     )
+
+                    val result = transactionRepository.processTransaction(request)
                     if (result.isSuccess) {
                         transactionSaved = true
+                        transactionResult = result.getOrNull()
                     } else {
                         Log.e(
                             QUANTUM_TRANSACTION_TAG,
@@ -191,9 +215,17 @@ fun QuantumTransactionProcessingScreen(
                         .weight(1f),
                     contentAlignment = Alignment.Center
                 ) {
+                    val isMedical = transactionScenario == TransactionScenario.MEDICAL_RECORD_ACCESS
+                    val dispAmount = if (isMedical) "Medical Access" else amount
+                    val dispBen = if (isMedical) {
+                        listOfNotNull(
+                            patientId.takeIf { it.isNotBlank() }?.let { "Patient: $it" },
+                            accessReason.takeIf { it.isNotBlank() }?.let { "Reason: $it" }
+                        ).joinToString(" | ").ifEmpty { "—" }
+                    } else beneficiary.ifBlank { "—" }
                     QuantumTransactionCard(
-                        amount = amount,
-                        beneficiary = beneficiary,
+                        amount = dispAmount,
+                        beneficiary = dispBen,
                         quantumId = quantumId,
                         progress = progress.value,
                         currentStep = currentStep

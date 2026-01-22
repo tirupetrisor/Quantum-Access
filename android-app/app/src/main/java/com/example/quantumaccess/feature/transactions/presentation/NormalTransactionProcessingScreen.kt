@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -63,6 +64,10 @@ import com.example.quantumaccess.core.designsystem.theme.Slate800
 import com.example.quantumaccess.core.designsystem.theme.Steel200
 import com.example.quantumaccess.core.designsystem.theme.Steel300
 import com.example.quantumaccess.data.sample.RepositoryProvider
+import com.example.quantumaccess.domain.model.TransactionChannel
+import com.example.quantumaccess.domain.model.TransactionRequest
+import com.example.quantumaccess.domain.model.TransactionResult
+import com.example.quantumaccess.domain.model.TransactionScenario
 import com.example.quantumaccess.domain.repository.TransactionRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -80,8 +85,12 @@ private const val NORMAL_TRANSACTION_TAG = "NormalTransactionScreen"
 @Composable
 fun NormalTransactionProcessingScreen(
     modifier: Modifier = Modifier,
-    amount: String = "€1,250.00",
-    beneficiary: String = "John D. – Quantum Savings",
+    amount: String = "0",
+    beneficiary: String = "",
+    patientId: String = "",
+    accessReason: String = "",
+    scenario: String = "BANKING_PAYMENT",
+    simulateAttack: Boolean = false,
     onReturnToDashboard: () -> Unit = {},
     onLogout: () -> Unit = {},
     transactionRepository: TransactionRepository = RepositoryProvider.transactionRepository
@@ -99,11 +108,23 @@ fun NormalTransactionProcessingScreen(
     }
 
     var isProcessing by remember { mutableStateOf(true) }
-    var transactionSaved by remember { mutableStateOf(false) } // Prevent duplicates
+    var transactionSaved by remember { mutableStateOf(false) }
+    var transactionResult by remember { mutableStateOf<TransactionResult?>(null) }
     val progress = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
+    
+    // Parse scenario
+    val transactionScenario = remember(scenario) {
+        when (scenario) {
+            "MEDICAL_RECORD_ACCESS" -> TransactionScenario.MEDICAL_RECORD_ACCESS
+            else -> TransactionScenario.BANKING_PAYMENT
+        }
+    }
 
     LaunchedEffect(Unit) {
+        // Set simulate attack flag in repository
+        transactionRepository.simulateAttackEnabled = simulateAttack
+        
         progress.snapTo(0f)
         progress.animateTo(
             targetValue = 1f,
@@ -111,19 +132,22 @@ fun NormalTransactionProcessingScreen(
         )
         
         if (!transactionSaved) {
-            // Save transaction to DB
-            // Parse amount string to Double (remove currency symbol and commas)
-            val cleanAmount = amount.replace("[^\\d.]".toRegex(), "").toDoubleOrNull() ?: 0.0
-
-            val result = transactionRepository.insertTransaction(
-                amount = cleanAmount,
-                mode = "NORMAL",
-                status = "SUCCESS",
-                intercepted = false, // Server will update this status if interception occurred
-                beneficiary = beneficiary
+            val isMedical = transactionScenario == TransactionScenario.MEDICAL_RECORD_ACCESS
+            val cleanAmount = amount.replace("[^\\d.]".toRegex(), "").toDoubleOrNull()?.takeIf { it > 0 }
+            val request = TransactionRequest(
+                amount = if (isMedical) null else (cleanAmount ?: 0.0),
+                beneficiary = if (isMedical) null else beneficiary.takeIf { it.isNotBlank() },
+                patientId = if (isMedical) patientId.takeIf { it.isNotBlank() } else null,
+                accessReason = if (isMedical) accessReason.takeIf { it.isNotBlank() } else null,
+                scenario = transactionScenario,
+                mode = TransactionChannel.NORMAL,
+                simulateAttack = simulateAttack
             )
+
+            val result = transactionRepository.processTransaction(request)
             if (result.isSuccess) {
                 transactionSaved = true
+                transactionResult = result.getOrNull()
             } else {
                 Log.e(
                     NORMAL_TRANSACTION_TAG,
@@ -163,8 +187,12 @@ fun NormalTransactionProcessingScreen(
                 NormalProcessingCard(
                     amount = amount,
                     beneficiary = beneficiary,
+                    patientId = patientId,
+                    accessReason = accessReason,
+                    scenario = transactionScenario,
                     progress = progress.value,
-                    isProcessing = isProcessing
+                    isProcessing = isProcessing,
+                    transactionResult = transactionResult
                 )
             }
             if (!isProcessing) {
@@ -186,9 +214,21 @@ fun NormalTransactionProcessingScreen(
 private fun NormalProcessingCard(
     amount: String,
     beneficiary: String,
+    patientId: String,
+    accessReason: String,
+    scenario: TransactionScenario,
     progress: Float,
-    isProcessing: Boolean
+    isProcessing: Boolean,
+    transactionResult: TransactionResult?
 ) {
+    val isMedical = scenario == TransactionScenario.MEDICAL_RECORD_ACCESS
+    val displayAmount = if (isMedical) "Medical Access" else amount
+    val displayBeneficiary = if (isMedical) {
+        listOfNotNull(
+            patientId.takeIf { it.isNotBlank() }?.let { "Patient: $it" },
+            accessReason.takeIf { it.isNotBlank() }?.let { "Reason: $it" }
+        ).joinToString(" | ").ifEmpty { "—" }
+    } else beneficiary.ifBlank { "—" }
     Surface(
         shape = RoundedCornerShape(28.dp),
         color = Color.White,
@@ -205,8 +245,22 @@ private fun NormalProcessingCard(
                 .padding(horizontal = 24.dp, vertical = 28.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Scenario badge
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = CardBone,
+                modifier = Modifier.padding(bottom = 12.dp)
+            ) {
+                Text(
+                    text = scenario.displayName,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Slate700,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                )
+            }
+            
             Text(
-                text = amount,
+                text = displayAmount,
                 style = MaterialTheme.typography.headlineLarge,
                 color = DeepBlue,
                 fontWeight = FontWeight.Bold,
@@ -214,19 +268,19 @@ private fun NormalProcessingCard(
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Transfer Amount",
+                text = if (isMedical) "Record Access" else "Transfer Amount",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Slate800
             )
             Spacer(modifier = Modifier.height(28.dp))
             Text(
-                text = "To",
+                text = if (isMedical) "Details" else "To",
                 style = MaterialTheme.typography.bodySmall,
                 color = Steel200
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = beneficiary,
+                text = displayBeneficiary,
                 style = MaterialTheme.typography.titleMedium,
                 color = NightBlack,
                 fontWeight = FontWeight.SemiBold
@@ -248,7 +302,7 @@ private fun NormalProcessingCard(
                 enter = fadeIn(),
                 exit = fadeOut()
             ) {
-                SuccessSection()
+                ResultSection(transactionResult = transactionResult)
             }
         }
     }
@@ -291,21 +345,32 @@ private fun ProcessingProgress(progress: Float) {
 }
 
 @Composable
-private fun SuccessSection() {
+private fun ResultSection(transactionResult: TransactionResult?) {
+    val isCompromised = transactionResult?.compromised == true
+    
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             modifier = Modifier
                 .size(72.dp)
                 .clip(CircleShape)
-                .background(Color(0xFFE8F9EF)),
+                .background(if (isCompromised) Color(0xFFFDECEC) else Color(0xFFE8F9EF)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = Icons.Rounded.Check,
-                contentDescription = null,
-                tint = SecureGreen,
-                modifier = Modifier.size(34.dp)
-            )
+            if (isCompromised) {
+                Icon(
+                    imageVector = Icons.Rounded.Warning,
+                    contentDescription = null,
+                    tint = com.example.quantumaccess.core.designsystem.theme.AlertRed,
+                    modifier = Modifier.size(34.dp)
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Rounded.Check,
+                    contentDescription = null,
+                    tint = SecureGreen,
+                    modifier = Modifier.size(34.dp)
+                )
+            }
         }
         Spacer(modifier = Modifier.height(16.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -313,30 +378,87 @@ private fun SuccessSection() {
                 modifier = Modifier
                     .size(22.dp)
                     .clip(RoundedCornerShape(6.dp))
-                    .background(SecureGreen.copy(alpha = 0.15f)),
+                    .background(
+                        if (isCompromised) 
+                            com.example.quantumaccess.core.designsystem.theme.AlertRed.copy(alpha = 0.15f) 
+                        else 
+                            SecureGreen.copy(alpha = 0.15f)
+                    ),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Rounded.Check,
-                    contentDescription = null,
-                    tint = SecureGreen,
-                    modifier = Modifier.size(16.dp)
-                )
+                if (isCompromised) {
+                    Icon(
+                        imageVector = Icons.Rounded.Warning,
+                        contentDescription = null,
+                        tint = com.example.quantumaccess.core.designsystem.theme.AlertRed,
+                        modifier = Modifier.size(16.dp)
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Rounded.Check,
+                        contentDescription = null,
+                        tint = SecureGreen,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
             }
             Spacer(modifier = Modifier.size(8.dp))
             Text(
-                text = "Transaction successful",
+                text = if (isCompromised) "Transaction Compromised!" else "Transaction Successful",
                 style = MaterialTheme.typography.titleMedium,
-                color = SecureGreen,
+                color = if (isCompromised) com.example.quantumaccess.core.designsystem.theme.AlertRed else SecureGreen,
                 fontWeight = FontWeight.SemiBold
             )
         }
         Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = "Interception undetected",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Steel300
+        Text(
+            text = transactionResult?.message ?: "Processing completed",
+            style = MaterialTheme.typography.bodySmall,
+            color = Steel300,
+            textAlign = TextAlign.Center
+        )
+        
+        // Security scores
+        if (transactionResult != null) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                ScoreIndicator(
+                    label = "Normal Score",
+                    score = transactionResult.normalScore,
+                    isHighlighted = true
                 )
+                ScoreIndicator(
+                    label = "Quantum Score",
+                    score = transactionResult.quantumScore,
+                    isHighlighted = false
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ScoreIndicator(
+    label: String,
+    score: Int,
+    isHighlighted: Boolean
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = Steel300
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = "$score/100",
+            style = MaterialTheme.typography.titleMedium,
+            color = if (isHighlighted) DeepBlue else Steel300,
+            fontWeight = if (isHighlighted) FontWeight.Bold else FontWeight.Medium
+        )
     }
 }
 

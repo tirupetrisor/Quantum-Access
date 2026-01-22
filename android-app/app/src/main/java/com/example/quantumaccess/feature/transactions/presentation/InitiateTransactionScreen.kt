@@ -21,9 +21,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Euro
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Divider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -41,14 +45,20 @@ import androidx.compose.ui.unit.dp
 import com.example.quantumaccess.core.designsystem.components.InputField
 import com.example.quantumaccess.core.designsystem.components.PrimaryActionButton
 import com.example.quantumaccess.core.designsystem.components.QuantumTopBar
+import com.example.quantumaccess.core.designsystem.theme.AccentOrange
 import com.example.quantumaccess.core.designsystem.theme.BorderLight
 import com.example.quantumaccess.core.designsystem.theme.CardBone
+import com.example.quantumaccess.core.designsystem.theme.Cloud100
 import com.example.quantumaccess.core.designsystem.theme.DeepBlue
 import com.example.quantumaccess.core.designsystem.theme.NightBlack
 import com.example.quantumaccess.core.designsystem.theme.OutlineGray
+import com.example.quantumaccess.core.designsystem.theme.Slate700
 import com.example.quantumaccess.core.designsystem.theme.Slate800
+import com.example.quantumaccess.core.designsystem.theme.Steel300
+import com.example.quantumaccess.domain.model.TransactionScenario
 
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.filled.Security
@@ -68,17 +78,27 @@ enum class TransactionMode { NORMAL, QUANTUM }
 @Composable
 fun InitiateTransactionScreen(
 	modifier: Modifier = Modifier,
-	onContinue: (amount: String, beneficiary: String, mode: TransactionMode) -> Unit = { _, _, _ -> }
+	onContinue: (
+		amount: String?,
+		beneficiary: String?,
+		patientId: String?,
+		accessReason: String?,
+		mode: TransactionMode,
+		scenario: TransactionScenario,
+		simulateAttack: Boolean
+	) -> Unit = { _, _, _, _, _, _, _ -> }
 ) {
 	val context = LocalContext.current
 	val prefs = remember { SecurePrefsManager(context) }
 	
 	var amount by remember { mutableStateOf("") }
 	var beneficiary by remember { mutableStateOf("") }
+	var patientId by remember { mutableStateOf("") }
+	var accessReason by remember { mutableStateOf("") }
 	var selectedMode by remember { mutableStateOf(TransactionMode.QUANTUM) }
-	var isEveEnabled by remember { mutableStateOf(prefs.isEveSimulationEnabled()) }
+	var selectedScenario by remember { mutableStateOf(TransactionScenario.BANKING_PAYMENT) }
+	var simulateAttack by remember { mutableStateOf(false) }
 
-    // Force status bar icons to be light (visible on blue background)
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
@@ -90,10 +110,16 @@ fun InitiateTransactionScreen(
         }
     }
 
+    val isFormValid = if (selectedScenario == TransactionScenario.BANKING_PAYMENT) {
+        amount.isNotBlank() && beneficiary.isNotBlank()
+    } else {
+        patientId.isNotBlank() && accessReason.isNotBlank()
+    }
+
 	Column(
 		modifier = modifier
 			.fillMaxSize()
-			.background(Color.White)
+			.background(Cloud100)
             .navigationBarsPadding()
 	) {
 		QuantumTopBar(
@@ -104,126 +130,307 @@ fun InitiateTransactionScreen(
 		Column(
 			modifier = Modifier
 				.fillMaxSize()
-                .verticalScroll(rememberScrollState()) // Allow scrolling
-				.padding(horizontal = 16.dp, vertical = 12.dp)
+                .verticalScroll(rememberScrollState())
+				.padding(horizontal = 20.dp, vertical = 20.dp)
 		) {
-			// Content card
-			Box(
-				modifier = Modifier
-					.fillMaxWidth(),
-				contentAlignment = Alignment.Center
-			) {
-				Surface(
-				shape = RoundedCornerShape(20.dp),
-				shadowElevation = 10.dp,
+			// === SCENARIO SELECTOR ===
+			SectionHeader(
+				title = "Operation Type",
+				subtitle = "Select transaction type"
+			)
+			Spacer(modifier = Modifier.height(12.dp))
+			
+			ScenarioCard(
+				title = TransactionScenario.BANKING_PAYMENT.displayName,
+				subtitle = TransactionScenario.BANKING_PAYMENT.description,
+				selected = selectedScenario == TransactionScenario.BANKING_PAYMENT,
+				onClick = { selectedScenario = TransactionScenario.BANKING_PAYMENT }
+			)
+			Spacer(modifier = Modifier.height(10.dp))
+			ScenarioCard(
+				title = TransactionScenario.MEDICAL_RECORD_ACCESS.displayName,
+				subtitle = TransactionScenario.MEDICAL_RECORD_ACCESS.description,
+				selected = selectedScenario == TransactionScenario.MEDICAL_RECORD_ACCESS,
+				onClick = { selectedScenario = TransactionScenario.MEDICAL_RECORD_ACCESS }
+			)
+			
+			Spacer(modifier = Modifier.height(24.dp))
+			
+			// === CÂMPURI DIFERITE PER SCENARIU ===
+			Surface(
+				shape = RoundedCornerShape(16.dp),
 				color = Color.White,
-				modifier = Modifier
-					.fillMaxWidth()
-					.widthIn(max = 420.dp)
-					.align(Alignment.Center),
-				tonalElevation = 0.dp,
-				border = androidx.compose.foundation.BorderStroke(1.dp, CardBone)
-				) {
+				shadowElevation = 2.dp,
+				modifier = Modifier.fillMaxWidth()
+			) {
 				Column(
-					modifier = Modifier
-						.fillMaxWidth()
-						.padding(16.dp),
-					verticalArrangement = Arrangement.Top
+					modifier = Modifier.padding(20.dp)
 				) {
-					Spacer(modifier = Modifier.height(12.dp))
-					Text(
-						text = "Initiate Transaction",
-						style = MaterialTheme.typography.titleLarge,
-						color = DeepBlue,
-						fontWeight = FontWeight.SemiBold,
-						modifier = Modifier.fillMaxWidth(),
-						textAlign = TextAlign.Center
-					)
-
-					Spacer(modifier = Modifier.height(16.dp))
-					InputField(
-						value = amount,
-						onValueChange = { amount = it },
-						label = "Amount (€)",
-						placeholder = "0.00",
-						labelIcon = Icons.Filled.Euro
-					)
-					Spacer(modifier = Modifier.height(16.dp))
-					InputField(
-						value = beneficiary,
-						onValueChange = { beneficiary = it },
-						label = "Beneficiary",
-						placeholder = "Enter recipient name or account",
-						labelIcon = Icons.Filled.Person
-					)
-
-					Spacer(modifier = Modifier.height(20.dp))
-					Text(
-						text = "Select Transaction Mode",
-						style = MaterialTheme.typography.titleMedium,
-						color = DeepBlue,
-						fontWeight = FontWeight.SemiBold,
-						modifier = Modifier.fillMaxWidth(),
-						textAlign = TextAlign.Center
-					)
-					Spacer(modifier = Modifier.height(12.dp))
-
-					// Normal card
-					ModeCard(
-						title = "Normal Transaction",
-						subtitle = "Standard secure processing",
-						selected = selectedMode == TransactionMode.NORMAL,
-						onClick = { selectedMode = TransactionMode.NORMAL },
-						enabled = true
-					)
-					Spacer(modifier = Modifier.height(10.dp))
-					// Quantum card
-					ModeCard(
-						title = "Quantum Transaction (QKD Mode)",
-						subtitle = "Maximum quantum encryption",
-						selected = selectedMode == TransactionMode.QUANTUM,
-						onClick = { selectedMode = TransactionMode.QUANTUM },
-						enabled = true
-					)
-
-					Spacer(modifier = Modifier.height(16.dp))
-					
-					// Eve Simulation Toggle (only for Quantum mode)
-					if (selectedMode == TransactionMode.QUANTUM) {
-						Divider(color = BorderLight, modifier = Modifier.padding(vertical = 8.dp))
-						
-						EveSimulationToggle(
-							isEnabled = isEveEnabled,
-							onToggle = { enabled ->
-								isEveEnabled = enabled
-								prefs.setEveSimulationEnabled(enabled)
-							}
+					if (selectedScenario == TransactionScenario.BANKING_PAYMENT) {
+						// Banking payment: Amount + Beneficiary
+						SectionHeader(
+							title = "Payment Details",
+							subtitle = "Complete transfer information"
+						)
+						Spacer(modifier = Modifier.height(16.dp))
+						InputField(
+							value = amount,
+							onValueChange = { amount = it },
+							label = "Amount (€)",
+							placeholder = "0.00",
+							labelIcon = Icons.Filled.Euro
+						)
+						Spacer(modifier = Modifier.height(16.dp))
+						InputField(
+							value = beneficiary,
+							onValueChange = { beneficiary = it },
+							label = "Beneficiary",
+							placeholder = "Enter name or account",
+							labelIcon = Icons.Filled.Person
+						)
+					} else {
+						// Medical record access: Patient ID + Access reason
+						SectionHeader(
+							title = "Medical Access Details",
+							subtitle = "Complete access information"
+						)
+						Spacer(modifier = Modifier.height(16.dp))
+						InputField(
+							value = patientId,
+							onValueChange = { patientId = it },
+							label = "Patient ID / SSN",
+							placeholder = "Enter patient ID or SSN",
+							labelIcon = Icons.Filled.Person
+						)
+						Spacer(modifier = Modifier.height(16.dp))
+						InputField(
+							value = accessReason,
+							onValueChange = { accessReason = it },
+							label = "Access Reason",
+							placeholder = "Ex: Consultation, Emergency, Check-up",
+							labelIcon = Icons.Filled.Person
 						)
 					}
-
-					Spacer(modifier = Modifier.height(12.dp))
-				}
 				}
 			}
 			
-			// Button at bottom
-			Spacer(modifier = Modifier.height(16.dp))
+			Spacer(modifier = Modifier.height(24.dp))
+			
+			// === PROCESSING MODE ===
+			SectionHeader(
+				title = "Processing Mode",
+				subtitle = "Choose security level"
+			)
+			Spacer(modifier = Modifier.height(12.dp))
+
+			// Normal card
+			ModeCard(
+				title = "Normal Transaction",
+				subtitle = "Processing with standard cryptography",
+				selected = selectedMode == TransactionMode.NORMAL,
+				onClick = { selectedMode = TransactionMode.NORMAL },
+				enabled = true
+			)
+			Spacer(modifier = Modifier.height(10.dp))
+			// Quantum card
+			ModeCard(
+				title = "Quantum Transaction (QKD)",
+				subtitle = "Maximum security with quantum algorithms",
+				selected = selectedMode == TransactionMode.QUANTUM,
+				onClick = { selectedMode = TransactionMode.QUANTUM },
+				enabled = true
+			)
+			
+			Spacer(modifier = Modifier.height(24.dp))
+			
+			// === SIMULATE ATTACK TOGGLE ===
+			SimulateAttackToggle(
+				checked = simulateAttack,
+				onCheckedChange = { simulateAttack = it }
+			)
+
+			Spacer(modifier = Modifier.height(32.dp))
+			
+			// === CONTINUE BUTTON ===
 			PrimaryActionButton(
 				text = "Continue",
-				enabled = amount.isNotBlank() && beneficiary.isNotBlank(),
-				onClick = { onContinue(amount.trim(), beneficiary.trim(), selectedMode) }
+				enabled = isFormValid,
+				onClick = {
+					val amt = if (selectedScenario == TransactionScenario.BANKING_PAYMENT) amount.trim().takeIf { it.isNotBlank() } else null
+					val ben = if (selectedScenario == TransactionScenario.BANKING_PAYMENT) beneficiary.trim().takeIf { it.isNotBlank() } else null
+					val pat = if (selectedScenario == TransactionScenario.MEDICAL_RECORD_ACCESS) patientId.trim().takeIf { it.isNotBlank() } else null
+					val reason = if (selectedScenario == TransactionScenario.MEDICAL_RECORD_ACCESS) accessReason.trim().takeIf { it.isNotBlank() } else null
+					onContinue(amt, ben, pat, reason, selectedMode, selectedScenario, simulateAttack)
+				}
 			)
-			Spacer(modifier = Modifier.height(16.dp))
+			Spacer(modifier = Modifier.height(20.dp))
 		}
 	}
 }
 
-private data class ModeColors(
-	val container: Color,
-	val border: Color,
-	val title: Color,
-	val subtitle: Color
-)
+@Composable
+private fun SectionHeader(
+	title: String,
+	subtitle: String? = null
+) {
+	Column {
+		Text(
+			text = title,
+			style = MaterialTheme.typography.titleMedium,
+			color = NightBlack,
+			fontWeight = FontWeight.SemiBold
+		)
+		if (subtitle != null) {
+			Spacer(modifier = Modifier.height(4.dp))
+			Text(
+				text = subtitle,
+				style = MaterialTheme.typography.bodySmall,
+				color = Steel300
+			)
+		}
+	}
+}
+
+@Composable
+private fun ScenarioCard(
+	title: String,
+	subtitle: String,
+	selected: Boolean,
+	onClick: () -> Unit
+) {
+	// Când este selectat: fundal gri, border gri, doar bulina albastră
+	val bg = if (selected) CardBone else Color.White
+	val br = if (selected) Slate700.copy(alpha = 0.3f) else BorderLight
+	val titleColor = NightBlack // Păstrăm negru pentru ambele stări
+	val borderWidth = if (selected) 2.dp else 1.dp
+	
+	Surface(
+		shape = RoundedCornerShape(16.dp),
+		color = bg,
+		shadowElevation = if (selected) 4.dp else 1.dp,
+		modifier = Modifier
+			.fillMaxWidth()
+			.clip(RoundedCornerShape(16.dp))
+			.border(borderWidth, br, RoundedCornerShape(16.dp))
+			.clickable { onClick() }
+	) {
+		Row(
+			verticalAlignment = Alignment.CenterVertically,
+			horizontalArrangement = Arrangement.SpaceBetween,
+			modifier = Modifier
+				.fillMaxWidth()
+				.padding(18.dp)
+		) {
+			Column(modifier = Modifier.weight(1f)) {
+				Text(
+					text = title, 
+					style = MaterialTheme.typography.bodyLarge, 
+					color = titleColor, 
+					fontWeight = FontWeight.SemiBold
+				)
+				Spacer(modifier = Modifier.height(4.dp))
+				Text(
+					text = subtitle, 
+					style = MaterialTheme.typography.bodySmall, 
+					color = Steel300
+				)
+			}
+			Spacer(modifier = Modifier.width(12.dp))
+			if (selected) {
+				// Doar bulina este albastră când este selectat
+				Box(
+					modifier = Modifier
+						.size(24.dp)
+						.clip(CircleShape)
+						.background(DeepBlue),
+					contentAlignment = Alignment.Center
+				) {
+					Box(
+						modifier = Modifier
+							.size(10.dp)
+							.clip(CircleShape)
+							.background(Color.White)
+					)
+				}
+			} else {
+				Box(
+					modifier = Modifier
+						.size(24.dp)
+						.clip(CircleShape)
+						.border(2.dp, OutlineGray, CircleShape)
+				)
+			}
+		}
+	}
+}
+
+@Composable
+private fun SimulateAttackToggle(
+	checked: Boolean,
+	onCheckedChange: (Boolean) -> Unit
+) {
+	Surface(
+		shape = RoundedCornerShape(16.dp),
+		color = if (checked) AccentOrange.copy(alpha = 0.12f) else Color.White,
+		shadowElevation = 2.dp,
+		border = androidx.compose.foundation.BorderStroke(
+			width = if (checked) 1.5.dp else 1.dp,
+			color = if (checked) AccentOrange.copy(alpha = 0.3f) else BorderLight
+		),
+		modifier = Modifier.fillMaxWidth()
+	) {
+		Row(
+			verticalAlignment = Alignment.CenterVertically,
+			modifier = Modifier
+				.fillMaxWidth()
+				.padding(horizontal = 18.dp, vertical = 16.dp)
+		) {
+			Box(
+				modifier = Modifier
+					.size(40.dp)
+					.clip(CircleShape)
+					.background(
+						if (checked) AccentOrange.copy(alpha = 0.2f) 
+						else Steel300.copy(alpha = 0.1f)
+					),
+				contentAlignment = Alignment.Center
+			) {
+				Icon(
+					imageVector = Icons.Filled.Warning,
+					contentDescription = null,
+					tint = if (checked) AccentOrange else Steel300,
+					modifier = Modifier.size(22.dp)
+				)
+			}
+			Spacer(modifier = Modifier.width(14.dp))
+			Column(modifier = Modifier.weight(1f)) {
+				Text(
+					text = "Simulate quantum attack (demo)",
+					style = MaterialTheme.typography.bodyMedium,
+					color = if (checked) AccentOrange else NightBlack,
+					fontWeight = FontWeight.SemiBold
+				)
+				Spacer(modifier = Modifier.height(2.dp))
+				Text(
+					text = "Test the difference between modes",
+					style = MaterialTheme.typography.bodySmall,
+					color = Steel300
+				)
+			}
+			Spacer(modifier = Modifier.width(8.dp))
+			Switch(
+				checked = checked,
+				onCheckedChange = onCheckedChange,
+				colors = SwitchDefaults.colors(
+					checkedThumbColor = Color.White,
+					checkedTrackColor = AccentOrange,
+					uncheckedThumbColor = Color.White,
+					uncheckedTrackColor = Steel300
+				)
+			)
+		}
+	}
+}
 
 @Composable
 private fun ModeCard(
@@ -234,17 +441,19 @@ private fun ModeCard(
 	enabled: Boolean
 ) {
 	val bg = if (selected) DeepBlue else Color.White
-	val br = if (selected) DeepBlue else BorderLight
+	val br = if (selected) DeepBlue.copy(alpha = 0.3f) else BorderLight
 	val titleColor = if (selected) Color.White else NightBlack
 	val subtitleColor = if (selected) Color(0xFFBFDBFE) else Slate800
+	val borderWidth = if (selected) 2.dp else 1.dp
+	
 	Surface(
-		shape = RoundedCornerShape(14.dp),
-		shadowElevation = 0.dp,
+		shape = RoundedCornerShape(16.dp),
+		shadowElevation = if (selected) 6.dp else 2.dp,
 		color = bg,
 		modifier = Modifier
 			.fillMaxWidth()
-			.clip(RoundedCornerShape(14.dp))
-			.border(2.dp, br, RoundedCornerShape(14.dp))
+			.clip(RoundedCornerShape(16.dp))
+			.border(borderWidth, br, RoundedCornerShape(16.dp))
 			.clickable(enabled = enabled) { onClick() }
 	) {
 		Row(
@@ -252,24 +461,34 @@ private fun ModeCard(
 			horizontalArrangement = Arrangement.SpaceBetween,
 			modifier = Modifier
 				.fillMaxWidth()
-				.padding(16.dp)
+				.padding(18.dp)
 		) {
-			Column {
-				Text(text = title, style = MaterialTheme.typography.titleSmall, color = titleColor, fontWeight = FontWeight.Medium)
+			Column(modifier = Modifier.weight(1f)) {
+				Text(
+					text = title, 
+					style = MaterialTheme.typography.bodyLarge, 
+					color = titleColor, 
+					fontWeight = FontWeight.SemiBold
+				)
 				Spacer(modifier = Modifier.height(4.dp))
-				Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = subtitleColor)
+				Text(
+					text = subtitle, 
+					style = MaterialTheme.typography.bodySmall, 
+					color = subtitleColor
+				)
 			}
+			Spacer(modifier = Modifier.width(12.dp))
 			if (selected) {
 				Box(
 					modifier = Modifier
-						.size(22.dp)
+						.size(24.dp)
 						.clip(CircleShape)
 						.background(Color.White),
 					contentAlignment = Alignment.Center
 				) {
 					Box(
 						modifier = Modifier
-							.size(8.dp)
+							.size(10.dp)
 							.clip(CircleShape)
 							.background(DeepBlue)
 					)
@@ -277,7 +496,7 @@ private fun ModeCard(
 			} else {
 				Box(
 					modifier = Modifier
-						.size(22.dp)
+						.size(24.dp)
 						.clip(CircleShape)
 						.border(2.dp, OutlineGray, CircleShape)
 				)

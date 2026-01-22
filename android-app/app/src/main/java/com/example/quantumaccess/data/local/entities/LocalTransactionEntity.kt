@@ -20,5 +20,14 @@ data class LocalTransactionEntity(
     val status: String, // e.g., "SUCCESS", "FAILED", "INTERCEPTED"
     val intercepted: Boolean,
     val lastUpdated: Instant = Instant.now(),
-    val createdAt: Instant
+    val createdAt: Instant,
+    // New security fields
+    val scenario: String? = null, // "BANKING_PAYMENT" | "MEDICAL_RECORD_ACCESS"
+    val securityScoreNormal: Int? = null, // 0-100
+    val securityScoreQuantum: Int? = null, // 0-100
+    val qber: Double? = null, // Quantum Bit Error Rate
+    val eveDetected: Boolean? = null, // Eavesdropper detected
+    val compromised: Boolean? = null, // Transaction compromised
+    val patientId: String? = null, // ID Pacient/CNP – doar pentru MEDICAL_RECORD_ACCESS
+    val accessReason: String? = null // Motiv acces – doar pentru MEDICAL_RECORD_ACCESS
 )
