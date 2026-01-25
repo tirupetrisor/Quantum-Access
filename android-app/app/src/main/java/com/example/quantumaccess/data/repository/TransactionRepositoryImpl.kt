@@ -37,6 +37,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 import kotlin.random.Random
+import com.example.quantumaccess.core.security.SecurityScorer
 
 class TransactionRepositoryImpl(
     private val context: Context,
@@ -260,10 +261,64 @@ class TransactionRepositoryImpl(
     }
 
     override fun getQuantumProcessSteps(): List<QuantumProcessStep> {
+        // Determine if we should simulate Eve based on the flag
+        val simulateEve = simulateAttackEnabled
+        val qberValue = if (simulateEve) Random.nextDouble(0.15, 0.25) else Random.nextDouble(0.02, 0.06)
+        val eveDetected = qberValue > 0.11
+        
         return listOf(
-            QuantumProcessStep(1.0f, "Completed", "Initialization", false),
-            QuantumProcessStep(1.0f, "Completed", "Entanglement", false),
-            QuantumProcessStep(1.0f, "Success", "QKD Exchange Secured", true)
+            // Step 1: Initialize quantum channel
+            QuantumProcessStep(
+                progress = 0.10f,
+                status = "Initializing Quantum Channel",
+                detail = "Establishing secure connection to QKD server...",
+                isTerminal = false
+            ),
+            // Step 2: Generate quantum key
+            QuantumProcessStep(
+                progress = 0.25f,
+                status = "Generating Quantum Key",
+                detail = "BB84 protocol active - transmitting qubits...",
+                isTerminal = false
+            ),
+            // Step 3: Qubit transmission
+            QuantumProcessStep(
+                progress = 0.40f,
+                status = "Transmitting Qubits",
+                detail = "Alice → Bob: Polarized photons in transit...",
+                isTerminal = false
+            ),
+            // Step 4: Basis reconciliation
+            QuantumProcessStep(
+                progress = 0.55f,
+                status = "Basis Reconciliation",
+                detail = "Comparing measurement bases between parties...",
+                isTerminal = false
+            ),
+            // Step 5: Eve Detection / QBER calculation
+            QuantumProcessStep(
+                progress = 0.70f,
+                status = if (eveDetected) "⚠️ Eavesdropping Detected!" else "Scanning for Eve",
+                detail = "QBER: ${String.format("%.1f", qberValue * 100)}% ${if (eveDetected) "(threshold exceeded!)" else "(within safe limits)"}",
+                isTerminal = false
+            ),
+            // Step 6: Privacy amplification
+            QuantumProcessStep(
+                progress = 0.85f,
+                status = if (eveDetected) "Regenerating Secure Key" else "Privacy Amplification",
+                detail = if (eveDetected) "Attack blocked - generating new quantum key..." else "Applying error correction and key distillation...",
+                isTerminal = false
+            ),
+            // Step 7: Final result
+            QuantumProcessStep(
+                progress = 1.0f,
+                status = if (eveDetected) "Transaction Secured (Attack Blocked)" else "Transaction Complete",
+                detail = if (eveDetected) 
+                    "QKD detected interception attempt. New key generated. QBER: ${String.format("%.1f", qberValue * 100)}%" 
+                else 
+                    "Quantum-secured transaction successful. QBER: ${String.format("%.1f", qberValue * 100)}%",
+                isTerminal = true
+            )
         )
     }
 
@@ -391,44 +446,72 @@ class TransactionRepositoryImpl(
     }
 
     /**
-     * Simulează analiza de securitate pentru o tranzacție.
-     * În producție, aceasta ar fi înlocuită cu apeluri reale către QKDService și EveDetector.
+     * Analizează securitatea tranzacției folosind SecurityScorer.
+     * Folosește logica reală pentru calcul scoruri conform specificației.
      */
     private fun simulateSecurityAnalysis(request: TransactionRequest): TransactionResult {
         val isQuantum = request.mode == TransactionChannel.QUANTUM
+        val keySize = 256 // Standard key size
+        val scenario = request.scenario
+        val shouldSimulateAttack = simulateAttackEnabled || request.simulateAttack
         
-        // Scoruri de bază
-        var normalScore = Random.nextInt(60, 80) // Normal: 60-80
-        var quantumScore = Random.nextInt(85, 99) // Quantum: 85-99
-        
-        // QBER (Quantum Bit Error Rate) - mai mic = mai bun
-        var qber = if (isQuantum) Random.nextDouble(0.01, 0.05) else Random.nextDouble(0.15, 0.25)
-        
+        var qber: Double
         var eveDetected = false
         var compromised = false
 
-        // Dacă simulăm atac
-        if (simulateAttackEnabled || request.simulateAttack) {
-            if (isQuantum) {
-                // Quantum detectează atacul
-                qber = Random.nextDouble(0.15, 0.30) // QBER ridicat = atac detectat
-                eveDetected = true
-                quantumScore = Random.nextInt(70, 85) // Scor redus dar încă bun
-                // Tranzacția NU este compromisă în modul quantum (atacul e detectat)
-                compromised = false
+        if (isQuantum) {
+            // === QUANTUM MODE ===
+            // Simulează generare cheie QKD
+            qber = if (shouldSimulateAttack) {
+                // Atac simulat: QBER ridicat (0.15-0.30)
+                Random.nextDouble(0.15, 0.30)
             } else {
-                // Normal NU detectează atacul
-                eveDetected = false // Nu poate detecta
-                normalScore = Random.nextInt(40, 60) // Scor scăzut
-                compromised = true // Datele sunt compromise
+                // Normal: QBER scăzut (0.01-0.05)
+                Random.nextDouble(0.01, 0.05)
+            }
+            
+            // Eve Detection: verifică dacă QBER depășește threshold-ul
+            // Conform specificației: qber > 0.10 sau (isEveEnabled && qber > 0.05)
+            eveDetected = qber > 0.10 || (shouldSimulateAttack && qber > 0.05)
+            
+            // Quantum NU este compromis chiar dacă Eve e detectat (cheia se regenerează)
+            compromised = false
+        } else {
+            // === NORMAL MODE ===
+            // NU folosește QKD, deci nu poate detecta Eve
+            eveDetected = false
+            
+            if (shouldSimulateAttack) {
+                // Atac simulat: QBER ridicat pentru comparație
+                qber = 0.5 // Conform specificației
+                compromised = true
+            } else {
+                // Fără atac: QBER normal
+                qber = Random.nextDouble(0.05, 0.15)
+                compromised = false
             }
         }
 
+        // Calculează scoruri folosind SecurityScorer
+        val quantumScore = SecurityScorer.computeQuantumScore(
+            keySize = keySize,
+            qber = if (isQuantum) qber else null,
+            eveDetected = eveDetected,
+            scenario = scenario
+        )
+        
+        val normalScore = SecurityScorer.computeNormalScore(
+            keySize = keySize,
+            qber = if (!isQuantum && shouldSimulateAttack) qber else null,
+            compromised = compromised,
+            scenario = scenario
+        )
+
         val message = when {
-            compromised -> "Transaction compromised! Data may be intercepted."
-            eveDetected && isQuantum -> "Attack detected and blocked. Data is secure."
-            isQuantum -> "Transaction secured with quantum algorithms."
-            else -> "Transaction processed with standard cryptography."
+            compromised -> "Tranzacție compromisă! Datele ar fi putut fi interceptate."
+            eveDetected && isQuantum -> "Atac detectat și blocat. Datele sunt securizate."
+            isQuantum -> "Tranzacție securizată cu QKD (Quantum Key Distribution)."
+            else -> "Tranzacție procesată cu criptografie standard."
         }
 
         return TransactionResult(

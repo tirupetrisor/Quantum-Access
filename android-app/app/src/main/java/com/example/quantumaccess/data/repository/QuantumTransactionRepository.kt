@@ -218,12 +218,22 @@ class QuantumTransactionRepository(
                     transactionId = transactionId.toString(),
                     userId = userId.toString(),
                     amount = amount,
-                    type = "QUANTUM",
-                    status = "SUCCESS",
-                    interceptionDetected = false,
-                    beneficiaryName = beneficiary
+                    beneficiaryName = beneficiary,
+                    scenario = "BANKING_PAYMENT"
                 )
-                remoteDataSource.createTransaction(transactionDto)
+                val processingDto = com.example.quantumaccess.data.remote.dto.TransactionProcessingDto(
+                    transactionId = transactionId.toString(),
+                    processingMode = "QUANTUM",
+                    status = "SUCCESS"
+                )
+                val securityDto = com.example.quantumaccess.data.remote.dto.SecurityAnalysisDto(
+                    transactionId = transactionId.toString(),
+                    securityScoreQuantum = 100,
+                    qber = eveResult.qber,
+                    eveDetected = false,
+                    compromised = false
+                )
+                remoteDataSource.createFullTransaction(transactionDto, processingDto, securityDto)
                 
                 // Store quantum key metadata in Supabase
                 storeQuantumKeyMetadata(keyEntity)

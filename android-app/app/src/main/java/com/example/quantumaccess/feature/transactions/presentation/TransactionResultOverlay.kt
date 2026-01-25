@@ -258,50 +258,51 @@ private fun getOverlayContent(
     isCompromised: Boolean,
     eveDetected: Boolean
 ): OverlayContent {
-    val scenarioText = when (scenario) {
-        TransactionScenario.BANKING_PAYMENT -> "banking payment"
-        TransactionScenario.MEDICAL_RECORD_ACCESS -> "medical record access"
-    }
-    
     return when {
-        isCompromised -> OverlayContent(
+        // BANKING_PAYMENT + Normal + compromised
+        isCompromised && scenario == TransactionScenario.BANKING_PAYMENT -> OverlayContent(
             icon = Icons.Filled.Error,
             iconColor = AlertRed,
             iconBackgroundColor = AlertRed.copy(alpha = 0.1f),
-            title = "Transaction Compromised!",
+            title = "Tranzacție compromisă",
             titleColor = AlertRed,
-            description = "Warning! In Normal mode, $scenarioText could have been intercepted. " +
-                    "Your data is not protected against future quantum attacks. " +
-                    "Use Quantum mode for maximum security."
+            description = "Tranzacția ta a fost compromisă în simulare. Datele bancare ar fi putut fi expuse. Folosirea QKD (Quantum Key Distribution) reduce acest risc."
         )
-        eveDetected && isQuantum -> OverlayContent(
+        // MEDICAL_RECORD_ACCESS + Normal + compromised
+        isCompromised && scenario == TransactionScenario.MEDICAL_RECORD_ACCESS -> OverlayContent(
+            icon = Icons.Filled.Error,
+            iconColor = AlertRed,
+            iconBackgroundColor = AlertRed.copy(alpha = 0.1f),
+            title = "Acces compromis la dosarul medical",
+            titleColor = AlertRed,
+            description = "În simulare, dosarul medical ar fi putut fi expus. Informațiile sensibile riscă impact major."
+        )
+        // BANKING_PAYMENT + Quantum + safe (with or without Eve detected)
+        isQuantum && scenario == TransactionScenario.BANKING_PAYMENT -> OverlayContent(
             icon = Icons.Filled.Shield,
             iconColor = SecureGreen,
             iconBackgroundColor = SecureGreen.copy(alpha = 0.1f),
-            title = "Attack Detected and Blocked!",
+            title = "Tranzacție protejată",
             titleColor = SecureGreen,
-            description = "Quantum algorithms detected an interception attempt during " +
-                    "${if (scenario == TransactionScenario.BANKING_PAYMENT) "banking payment" else "medical record access"}. " +
-                    "Your data was automatically protected by regenerating quantum keys."
+            description = "Tranzacția a fost protejată de un canal QKD securizat. Atacurile simulate nu au reușit să compromită datele."
         )
-        isQuantum -> OverlayContent(
-            icon = Icons.Filled.CheckCircle,
+        // MEDICAL_RECORD_ACCESS + Quantum + safe (with or without Eve detected)
+        isQuantum && scenario == TransactionScenario.MEDICAL_RECORD_ACCESS -> OverlayContent(
+            icon = Icons.Filled.Shield,
             iconColor = SecureGreen,
             iconBackgroundColor = SecureGreen.copy(alpha = 0.1f),
-            title = "Secured with Quantum Algorithms",
+            title = "Acces medical securizat",
             titleColor = SecureGreen,
-            description = "Excellent! ${scenario.displayName} was secured with quantum algorithms. " +
-                    "Your data is protected against future quantum computers."
+            description = "Canalul QKD a detectat tentativa de interceptare și a regenerat cheile — informațiile rămân protejate."
         )
+        // Default: Normal mode without attack
         else -> OverlayContent(
             icon = Icons.Filled.Info,
             iconColor = DeepBlue,
             iconBackgroundColor = DeepBlue.copy(alpha = 0.1f),
-            title = "Standard Processing",
+            title = "Procesare standard",
             titleColor = NightBlack,
-            description = "${scenario.displayName} was processed with standard cryptography. " +
-                    "For maximum protection against future threats, " +
-                    "we recommend Quantum mode."
+            description = "${scenario.displayName} a fost procesată cu criptografie standard. Pentru protecție maximă împotriva amenințărilor viitoare, recomandăm modul Quantum."
         )
     }
 }

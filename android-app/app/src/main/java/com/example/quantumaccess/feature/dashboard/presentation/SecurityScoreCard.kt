@@ -84,7 +84,7 @@ fun SecurityScoreCard(
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text(
-                        text = "Security Score",
+                        text = "Security Impact Score",
                         style = MaterialTheme.typography.titleMedium,
                         color = NightBlack,
                         fontWeight = FontWeight.SemiBold
@@ -105,13 +105,13 @@ fun SecurityScoreCard(
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 ScoreCircle(
-                    label = "Normal",
+                    label = "Securitate Normală",
                     score = scoreSummary.normalScore,
                     color = Steel300,
                     isHighlighted = false
                 )
                 ScoreCircle(
-                    label = "Quantum",
+                    label = "Securitate Quantum (QKD)",
                     score = scoreSummary.quantumScore,
                     color = SecureGreen,
                     isHighlighted = true

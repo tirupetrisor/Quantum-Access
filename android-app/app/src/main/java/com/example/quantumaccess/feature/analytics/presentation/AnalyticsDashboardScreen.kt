@@ -371,7 +371,7 @@ private fun WhyThisMattersPanel(
 			WhyThisMattersBullet(
 				icon = Icons.Filled.Security,
 				iconColor = DeepBlue,
-				text = "Quantum computers will be able to break current cryptography in the next 5-10 years"
+				text = "Datele medicale expuse pot afecta tratamentul și viața privată."
 			)
 			
 			Spacer(modifier = Modifier.height(12.dp))
@@ -379,7 +379,7 @@ private fun WhyThisMattersPanel(
 			WhyThisMattersBullet(
 				icon = Icons.Filled.Shield,
 				iconColor = SecureGreen,
-				text = "QKD automatically detects any interception attempt and regenerates keys"
+				text = "Plățile compromise duc la pierderi financiare și fraudă."
 			)
 			
 			Spacer(modifier = Modifier.height(12.dp))
@@ -387,7 +387,7 @@ private fun WhyThisMattersPanel(
 			WhyThisMattersBullet(
 				icon = Icons.Filled.Lock,
 				iconColor = AccentOrange,
-				text = "Your banking and medical data deserve maximum protection for the future"
+				text = "Trecerea la soluții QKD (Quantum Key Distribution) protejează datele pe termen lung."
 			)
 		}
 	}
