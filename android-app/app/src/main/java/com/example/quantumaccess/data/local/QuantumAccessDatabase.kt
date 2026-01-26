@@ -25,7 +25,7 @@ import com.example.quantumaccess.data.local.entities.SessionEntity
         LocalTransactionEntity::class,
         QuantumKeyEntity::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = true
 )
 @TypeConverters(com.example.quantumaccess.data.local.TypeConverters::class)

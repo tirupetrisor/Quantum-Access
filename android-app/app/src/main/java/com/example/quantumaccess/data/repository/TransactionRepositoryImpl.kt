@@ -337,7 +337,14 @@ class TransactionRepositoryImpl(
         val securityResult = simulateSecurityAnalysis(request)
 
         // Determinăm statusul tranzacției
-        val status = if (securityResult.compromised) "INTERCEPTED" else "SUCCESS"
+        val status = when {
+            // Pentru Normal: compromised înseamnă vulnerabil (nu știm sigur dacă a fost interceptată)
+            securityResult.compromised && request.mode == TransactionChannel.NORMAL -> "VULNERABLE"
+            // Pentru alte cazuri de compromised (dacă există)
+            securityResult.compromised -> "COMPROMISED"
+            securityResult.eveDetected && request.mode == TransactionChannel.QUANTUM -> "ATTACK_BLOCKED"
+            else -> "SUCCESS"
+        }
 
         // DTO pentru tabela transactions: Banking = amount + beneficiaryName; Medical = patientId + accessReason, amount = null
         val isMedical = request.scenario == TransactionScenario.MEDICAL_RECORD_ACCESS
@@ -508,7 +515,7 @@ class TransactionRepositoryImpl(
         )
 
         val message = when {
-            compromised -> "Tranzacție compromisă! Datele ar fi putut fi interceptate."
+            compromised -> "Atenție: Tranzacția s-a finalizat, dar datele pot fi interceptate. Criptografia standard poate detecta modificarea datelor, dar nu poate detecta dacă datele au fost citite (interceptate) fără modificare."
             eveDetected && isQuantum -> "Atac detectat și blocat. Datele sunt securizate."
             isQuantum -> "Tranzacție securizată cu QKD (Quantum Key Distribution)."
             else -> "Tranzacție procesată cu criptografie standard."
@@ -606,29 +613,29 @@ class TransactionRepositoryImpl(
                 stepName = "Connection Initiation",
                 normalStatus = TimelineStepStatus.OK,
                 quantumStatus = TimelineStepStatus.OK,
-                normalDetail = "Standard TLS connection",
+                normalDetail = "Secure connection established",
                 quantumDetail = "Quantum channel established"
             ),
             ComparisonTimelineStep(
                 stepName = "Key Exchange",
                 normalStatus = if (wasCompromised) TimelineStepStatus.WARNING else TimelineStepStatus.OK,
                 quantumStatus = TimelineStepStatus.OK,
-                normalDetail = if (wasCompromised) "RSA/ECC (vulnerable to quantum)" else "Standard RSA/ECC",
-                quantumDetail = "QKD BB84 protocol"
+                normalDetail = if (wasCompromised) "Standard encryption (can be broken by future quantum computers)" else "Standard encryption",
+                quantumDetail = "Quantum key exchange (unbreakable by physics laws)"
             ),
             ComparisonTimelineStep(
                 stepName = "Integrity Verification",
                 normalStatus = if (wasCompromised) TimelineStepStatus.COMPROMISED else TimelineStepStatus.OK,
                 quantumStatus = if (wasEveDetected) TimelineStepStatus.WARNING else TimelineStepStatus.OK,
-                normalDetail = if (wasCompromised) "Cannot detect interceptions" else "Hash verified",
-                quantumDetail = if (wasEveDetected) "Eve detected, key regenerated" else "QBER < 5%, no interceptions"
+                normalDetail = if (wasCompromised) "Cannot detect interceptions" else "Data integrity confirmed",
+                quantumDetail = if (wasEveDetected) "Eavesdropping detected, key regenerated" else "No eavesdropping detected"
             ),
             ComparisonTimelineStep(
                 stepName = "Data Encryption",
                 normalStatus = if (wasCompromised) TimelineStepStatus.COMPROMISED else TimelineStepStatus.OK,
                 quantumStatus = TimelineStepStatus.OK,
-                normalDetail = if (wasCompromised) "Data potentially exposed" else "AES-256 applied",
-                quantumDetail = "AES-256 + quantum key"
+                normalDetail = if (wasCompromised) "Data potentially exposed" else "Military-grade encryption applied",
+                quantumDetail = "Military-grade encryption with quantum protection"
             ),
             ComparisonTimelineStep(
                 stepName = "Transaction Completion",

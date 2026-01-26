@@ -366,12 +366,8 @@ private fun SimulateAttackToggle(
 ) {
 	Surface(
 		shape = RoundedCornerShape(16.dp),
-		color = if (checked) AccentOrange.copy(alpha = 0.12f) else Color.White,
+		color = if (checked) AccentOrange else Color.White,
 		shadowElevation = 2.dp,
-		border = androidx.compose.foundation.BorderStroke(
-			width = if (checked) 1.5.dp else 1.dp,
-			color = if (checked) AccentOrange.copy(alpha = 0.3f) else BorderLight
-		),
 		modifier = Modifier.fillMaxWidth()
 	) {
 		Row(
@@ -385,7 +381,7 @@ private fun SimulateAttackToggle(
 					.size(40.dp)
 					.clip(CircleShape)
 					.background(
-						if (checked) AccentOrange.copy(alpha = 0.2f) 
+						if (checked) Color.White.copy(alpha = 0.2f) 
 						else Steel300.copy(alpha = 0.1f)
 					),
 				contentAlignment = Alignment.Center
@@ -393,7 +389,7 @@ private fun SimulateAttackToggle(
 				Icon(
 					imageVector = Icons.Filled.Warning,
 					contentDescription = null,
-					tint = if (checked) AccentOrange else Steel300,
+					tint = if (checked) Color.White else Steel300,
 					modifier = Modifier.size(22.dp)
 				)
 			}
@@ -402,14 +398,14 @@ private fun SimulateAttackToggle(
 				Text(
 					text = "Simulate quantum attack (demo)",
 					style = MaterialTheme.typography.bodyMedium,
-					color = if (checked) AccentOrange else NightBlack,
+					color = if (checked) Color.White else NightBlack,
 					fontWeight = FontWeight.SemiBold
 				)
 				Spacer(modifier = Modifier.height(2.dp))
 				Text(
 					text = "Test the difference between modes",
 					style = MaterialTheme.typography.bodySmall,
-					color = Steel300
+					color = if (checked) Color.White.copy(alpha = 0.9f) else Steel300
 				)
 			}
 			Spacer(modifier = Modifier.width(8.dp))
@@ -418,7 +414,7 @@ private fun SimulateAttackToggle(
 				onCheckedChange = onCheckedChange,
 				colors = SwitchDefaults.colors(
 					checkedThumbColor = Color.White,
-					checkedTrackColor = AccentOrange,
+					checkedTrackColor = Color.White.copy(alpha = 0.5f),
 					uncheckedThumbColor = Color.White,
 					uncheckedTrackColor = Steel300
 				)

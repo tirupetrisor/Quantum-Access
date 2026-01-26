@@ -48,6 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.quantumaccess.core.designsystem.components.PrimaryActionButton
 import com.example.quantumaccess.core.designsystem.components.QuantumTopBar
 import com.example.quantumaccess.core.designsystem.theme.BorderLight
@@ -266,12 +267,14 @@ private fun NormalProcessingCard(
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = if (isMedical) "Record Access" else "Transfer Amount",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Slate800
-            )
+            if (!isMedical) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Transfer Amount",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Slate800
+                )
+            }
             Spacer(modifier = Modifier.height(28.dp))
             Text(
                 text = if (isMedical) "Details" else "To",
@@ -373,67 +376,64 @@ private fun ResultSection(transactionResult: TransactionResult?) {
             }
         }
         Spacer(modifier = Modifier.height(16.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(22.dp)
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(
-                        if (isCompromised) 
-                            com.example.quantumaccess.core.designsystem.theme.AlertRed.copy(alpha = 0.15f) 
-                        else 
-                            SecureGreen.copy(alpha = 0.15f)
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                if (isCompromised) {
-                    Icon(
-                        imageVector = Icons.Rounded.Warning,
-                        contentDescription = null,
-                        tint = com.example.quantumaccess.core.designsystem.theme.AlertRed,
-                        modifier = Modifier.size(16.dp)
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Rounded.Check,
-                        contentDescription = null,
-                        tint = SecureGreen,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.size(8.dp))
+        if (isCompromised) {
             Text(
-                text = if (isCompromised) "Transaction Compromised!" else "Transaction Successful",
+                text = "Security Alert: Data May Be Compromised",
                 style = MaterialTheme.typography.titleMedium,
-                color = if (isCompromised) com.example.quantumaccess.core.designsystem.theme.AlertRed else SecureGreen,
+                color = com.example.quantumaccess.core.designsystem.theme.AlertRed,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        } else {
+            Text(
+                text = "Transaction Successful",
+                style = MaterialTheme.typography.titleMedium,
+                color = SecureGreen,
                 fontWeight = FontWeight.SemiBold
             )
         }
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            text = transactionResult?.message ?: "Processing completed",
-            style = MaterialTheme.typography.bodySmall,
-            color = Steel300,
-            textAlign = TextAlign.Center
-        )
         
-        // Security scores
-        if (transactionResult != null) {
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+        // Additional warning section for compromised transactions
+        if (isCompromised && transactionResult != null) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = com.example.quantumaccess.core.designsystem.theme.AlertRed.copy(alpha = 0.1f),
+                border = BorderStroke(1.dp, com.example.quantumaccess.core.designsystem.theme.AlertRed.copy(alpha = 0.3f)),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                ScoreIndicator(
-                    label = "Normal Score",
-                    score = transactionResult.normalScore,
-                    isHighlighted = true
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Standard encryption can detect data modification, but cannot detect if data was intercepted (read without modification). Quantum mode can detect interception attempts.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Slate800,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+        
+        // Security scores - only for non-compromised transactions
+        if (transactionResult != null && !isCompromised) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "Your Transaction Score",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Steel300,
+                    fontWeight = FontWeight.Medium
                 )
-                ScoreIndicator(
-                    label = "Quantum Score",
-                    score = transactionResult.quantumScore,
-                    isHighlighted = false
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "${transactionResult.normalScore}/100",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = DeepBlue,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 28.sp
                 )
             }
         }
@@ -450,14 +450,16 @@ private fun ScoreIndicator(
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = Steel300
+            color = if (isHighlighted) Slate800 else Steel300,
+            fontWeight = if (isHighlighted) FontWeight.SemiBold else FontWeight.Medium
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = "$score/100",
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleLarge,
             color = if (isHighlighted) DeepBlue else Steel300,
-            fontWeight = if (isHighlighted) FontWeight.Bold else FontWeight.Medium
+            fontWeight = FontWeight.Bold,
+            fontSize = if (isHighlighted) 28.sp else 20.sp
         )
     }
 }

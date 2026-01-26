@@ -27,6 +27,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -54,6 +55,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.unit.sp
 import com.example.quantumaccess.core.designsystem.components.PrimaryActionButton
 import com.example.quantumaccess.core.designsystem.components.QuantumTopBar
 import com.example.quantumaccess.core.designsystem.theme.AlertIndicatorRed
@@ -102,6 +104,7 @@ fun TransactionHistoryScreen(
 	onReturnToDashboard: () -> Unit = {},
 	onLoadMore: () -> Unit = {},
 	onLogout: () -> Unit = {},
+	onRepeatTransaction: (TransactionHistoryEntry, TransactionChannel) -> Unit = { _, _ -> },
 	transactionRepository: TransactionRepository = RepositoryProvider.transactionRepository
 ) {
     // Force status bar icons to be light (visible on blue background)
@@ -123,6 +126,7 @@ fun TransactionHistoryScreen(
 		.collectAsState(initial = emptyList())
 	var selectedFilter by remember { mutableStateOf(HistoryFilter.All) }
 	var visibleCount by remember { mutableIntStateOf(3) }
+	var showRepeatWarningDialog by remember { mutableStateOf<TransactionHistoryEntry?>(null) }
 
 	val filteredTransactions = remember(selectedFilter, transactions) {
 		when (selectedFilter) {
@@ -141,29 +145,17 @@ fun TransactionHistoryScreen(
 		visibleCount = 3
 	}
 
-	fun duplicateTransaction(entry: TransactionHistoryEntry) {
-		coroutineScope.launch {
-			val mode = when (entry.channel) {
-				TransactionChannel.QUANTUM -> "QUANTUM"
-				TransactionChannel.NORMAL -> "NORMAL"
-			}
-			val result = transactionRepository.insertTransaction(
-				amount = entry.amountValue,
-				mode = mode,
-				status = DuplicateStatusMessage,
-				intercepted = false,
-				beneficiary = entry.beneficiary
-			)
-			if (result.isFailure) {
-				Log.e(
-					HISTORY_TAG,
-					"Failed to duplicate transaction ${entry.id}",
-					result.exceptionOrNull()
-				)
-                Toast.makeText(context, "Failed to duplicate transaction", Toast.LENGTH_SHORT).show()
-			} else {
-                Toast.makeText(context, "Transaction duplicated successfully", Toast.LENGTH_SHORT).show()
-            }
+	fun handleRepeat(entry: TransactionHistoryEntry) {
+		// Check if transaction is compromised (Normal mode with ALERT state)
+		val isCompromised = entry.securityState == TransactionSecurityState.ALERT && 
+		                   entry.channel == TransactionChannel.NORMAL
+		
+		if (isCompromised) {
+			// Show warning dialog suggesting Quantum mode
+			showRepeatWarningDialog = entry
+		} else {
+			// Navigate directly to processing screen
+			onRepeatTransaction(entry, entry.channel)
 		}
 	}
 
@@ -195,7 +187,7 @@ fun TransactionHistoryScreen(
 				items(displayedTransactions, key = { it.id }) { entry ->
 					TransactionHistoryCard(
 						entry = entry,
-						onDuplicate = { duplicateTransaction(entry) }
+						onDuplicate = { handleRepeat(entry) }
 					)
 				}
 				item {
@@ -216,6 +208,22 @@ fun TransactionHistoryScreen(
 					}
 				}
 			}
+		}
+		
+		// Repeat Warning Dialog
+		showRepeatWarningDialog?.let { entry ->
+			RepeatWarningDialog(
+				entry = entry,
+				onDismiss = { showRepeatWarningDialog = null },
+				onUseQuantum = {
+					showRepeatWarningDialog = null
+					onRepeatTransaction(entry, TransactionChannel.QUANTUM)
+				},
+				onContinueNormal = {
+					showRepeatWarningDialog = null
+					onRepeatTransaction(entry, TransactionChannel.NORMAL)
+				}
+			)
 		}
 	}
 }
@@ -462,6 +470,78 @@ private fun TransactionRecipientRow(
 			)
 		}
 	}
+}
+
+@Composable
+private fun RepeatWarningDialog(
+	entry: TransactionHistoryEntry,
+	onDismiss: () -> Unit,
+	onUseQuantum: () -> Unit,
+	onContinueNormal: () -> Unit
+) {
+	AlertDialog(
+		onDismissRequest = onDismiss,
+		icon = {
+			Box(
+				modifier = Modifier
+					.size(48.dp)
+					.clip(CircleShape)
+					.background(AlertRed.copy(alpha = 0.15f)),
+				contentAlignment = Alignment.Center
+			) {
+				Icon(
+					imageVector = Icons.Rounded.Warning,
+					contentDescription = null,
+					tint = AlertRed,
+					modifier = Modifier.size(28.dp)
+				)
+			}
+		},
+		title = {
+			Text(
+				text = "Security Warning",
+				style = MaterialTheme.typography.titleLarge,
+				fontWeight = FontWeight.Bold,
+				color = Color(0xFF000000) // Pure black for maximum contrast
+			)
+		},
+		text = {
+			Column {
+				Text(
+					text = "The original transaction was vulnerable. Standard encryption cannot detect interceptions.",
+					style = MaterialTheme.typography.bodyMedium,
+					color = Color(0xFF000000), // Pure black for maximum contrast
+					lineHeight = 22.sp
+				)
+				Spacer(modifier = Modifier.height(12.dp))
+				Text(
+					text = "We recommend using Quantum mode for maximum security.",
+					style = MaterialTheme.typography.bodyMedium,
+					color = Color(0xFF1E40AF), // Darker blue for better contrast
+					fontWeight = FontWeight.SemiBold,
+					lineHeight = 22.sp
+				)
+			}
+		},
+		confirmButton = {
+			TextButton(onClick = onUseQuantum) {
+				Text(
+					text = "Use Quantum",
+					color = Color(0xFF1E40AF), // Darker blue for better contrast
+					fontWeight = FontWeight.SemiBold
+				)
+			}
+		},
+		dismissButton = {
+			TextButton(onClick = onContinueNormal) {
+				Text(
+					text = "Continue with Normal",
+					color = Color(0xFF000000), // Pure black for maximum contrast
+					fontWeight = FontWeight.Medium
+				)
+			}
+		}
+	)
 }
 
 private enum class HistoryFilter(val label: String) {

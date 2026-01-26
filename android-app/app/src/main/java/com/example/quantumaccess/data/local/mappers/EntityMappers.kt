@@ -36,7 +36,7 @@ fun LocalTransactionEntity.toDomainModel(): TransactionHistoryEntry {
         amountValue = this.amount,
         direction = if (this.amount < 0) TransactionDirection.DEBIT else TransactionDirection.CREDIT,
         channel = if (this.mode == "QUANTUM") TransactionChannel.QUANTUM else TransactionChannel.NORMAL,
-        statusMessage = this.status,
+        statusMessage = formatStatusMessage(this.status, this.mode),
         securityState = when {
             // Compromisă = ALERT (indiferent de mod)
             this.compromised == true -> TransactionSecurityState.ALERT
@@ -79,6 +79,20 @@ private fun parseScenario(scenario: String): TransactionScenario? {
         "BANKING_PAYMENT" -> TransactionScenario.BANKING_PAYMENT
         "MEDICAL_RECORD_ACCESS" -> TransactionScenario.MEDICAL_RECORD_ACCESS
         else -> null
+    }
+}
+
+/**
+ * Convertește statusul din DB într-un mesaj user-friendly
+ */
+private fun formatStatusMessage(status: String, mode: String): String {
+    return when (status) {
+        "VULNERABLE" -> "Vulnerable"
+        "COMPROMISED" -> "Compromised"
+        "ATTACK_BLOCKED" -> "Attack Blocked"
+        "SUCCESS" -> if (mode == "QUANTUM") "Secure" else "Completed"
+        "INTERCEPTED" -> "Compromised" // Legacy support
+        else -> status
     }
 }
 

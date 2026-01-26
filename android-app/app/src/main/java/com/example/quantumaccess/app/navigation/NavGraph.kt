@@ -187,7 +187,37 @@ fun AppNavGraph() {
 				onLoadMore = {
 					Toast.makeText(context, "Loading more transactions soon", Toast.LENGTH_SHORT).show()
 				},
-				onLogout = onLogoutAction
+				onLogout = onLogoutAction,
+				onRepeatTransaction = { entry, mode ->
+					val isMedical = entry.scenario == TransactionScenario.MEDICAL_RECORD_ACCESS
+					val amount = if (isMedical) "0" else entry.amountValue.toString()
+					val beneficiary = if (isMedical) "" else entry.beneficiary
+					val patientId = if (isMedical) {
+						val patientPart = entry.beneficiary.substringAfter("Patient: ")
+						if (patientPart != entry.beneficiary) {
+							patientPart.substringBefore(" |").trim()
+						} else ""
+					} else ""
+					val accessReason = if (isMedical) {
+						val reasonPart = entry.beneficiary.substringAfter("Reason: ")
+						if (reasonPart != entry.beneficiary) {
+							reasonPart.trim()
+						} else ""
+					} else ""
+					val scenario = entry.scenario?.name ?: "BANKING_PAYMENT"
+					
+					when (mode) {
+						com.example.quantumaccess.domain.model.TransactionChannel.NORMAL -> {
+							val route = "${Routes.NormalProcessing}?amount=${Uri.encode(amount)}&beneficiary=${Uri.encode(beneficiary)}&patientId=${Uri.encode(patientId)}&accessReason=${Uri.encode(accessReason)}&scenario=$scenario&simulateAttack=false"
+							navController.navigate(route)
+						}
+						com.example.quantumaccess.domain.model.TransactionChannel.QUANTUM -> {
+							val quantumId = generateQuantumId()
+							val route = "${Routes.QuantumProcessing}?amount=${Uri.encode(amount)}&beneficiary=${Uri.encode(beneficiary)}&patientId=${Uri.encode(patientId)}&accessReason=${Uri.encode(accessReason)}&quantumId=${Uri.encode(quantumId)}&scenario=$scenario&simulateAttack=false"
+							navController.navigate(route)
+						}
+					}
+				}
 			)
 		}
 		composable(Routes.Analytics) {

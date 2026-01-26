@@ -240,7 +240,8 @@ fun QuantumTransactionProcessingScreen(
                         beneficiary = dispBen,
                         quantumId = quantumId,
                         progress = progress.value,
-                        currentStep = currentStep
+                        currentStep = currentStep,
+                        isMedical = isMedical
                     )
                 }
             }
@@ -315,7 +316,8 @@ private fun QuantumTransactionCard(
     beneficiary: String,
     quantumId: String,
     progress: Float,
-    currentStep: QuantumProcessStep
+    currentStep: QuantumProcessStep,
+    isMedical: Boolean = false
 ) {
     // Track photon/qubit count - increases throughout the entire quantum process
     var photonCount by remember { mutableIntStateOf(0) }
@@ -345,9 +347,16 @@ private fun QuantumTransactionCard(
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp, vertical = 28.dp)
         ) {
-            TransactionDetailRow(label = "Amount", value = amount, emphasize = true)
+            TransactionDetailRow(
+                label = if (isMedical) "Access Type" else "Amount", 
+                value = amount, 
+                emphasize = true
+            )
             Spacer(modifier = Modifier.height(14.dp))
-            TransactionDetailRow(label = "Beneficiary", value = beneficiary)
+            TransactionDetailRow(
+                label = if (isMedical) "Patient Information" else "Beneficiary", 
+                value = beneficiary
+            )
             Spacer(modifier = Modifier.height(14.dp))
             TransactionDetailRow(label = "Quantum ID", value = quantumId, monospaced = true)
             Spacer(modifier = Modifier.height(20.dp))
@@ -442,37 +451,24 @@ private fun QuantumStatusMessage(step: QuantumProcessStep) {
         val icon = if (isFailure) Icons.Filled.Close else Icons.Rounded.Check
         val textColor = if (isFailure) Color(0xFFFFB4AB) else Color(0xFFA8FFDE)
         
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(iconBg),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = iconColor,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-            Spacer(modifier = Modifier.height(10.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = iconColor,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = step.status,
+                text = "Transaction Complete",
                 color = if (isFailure) AlertRed.copy(alpha = 0.9f) else Color.White,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = step.detail,
-                color = textColor,
-                style = MaterialTheme.typography.bodySmall,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
+                textAlign = TextAlign.Center
             )
         }
     } else {
