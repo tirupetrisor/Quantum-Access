@@ -38,8 +38,8 @@ import com.example.quantumaccess.core.designsystem.theme.Steel300
 import com.example.quantumaccess.domain.model.SecurityScoreSummary
 
 /**
- * Card care afișează scorurile de securitate în Dashboard.
- * Afișează scorurile Normal și Quantum și text informativ.
+ * Card that displays security scores in the Dashboard.
+ * Shows Normal and Quantum scores with informative text.
  */
 @Composable
 fun SecurityScoreCard(
@@ -105,13 +105,13 @@ fun SecurityScoreCard(
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 ScoreCircle(
-                    label = "Securitate Normală",
+                    label = "Normal Security",
                     score = scoreSummary.normalScore,
                     color = Steel300,
                     isHighlighted = false
                 )
                 ScoreCircle(
-                    label = "Securitate Quantum (QKD)",
+                    label = "Quantum Security (QKD)",
                     score = scoreSummary.quantumScore,
                     color = SecureGreen,
                     isHighlighted = true

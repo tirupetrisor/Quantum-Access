@@ -318,7 +318,11 @@ private fun TransactionHistoryCard(
 				horizontalArrangement = Arrangement.SpaceBetween,
 				verticalAlignment = Alignment.CenterVertically
 			) {
-				Row(verticalAlignment = Alignment.CenterVertically) {
+				// Left side: Avatar + Title/Date - takes remaining space
+				Row(
+					verticalAlignment = Alignment.CenterVertically,
+					modifier = Modifier.weight(1f)
+				) {
 					Box(
 						modifier = Modifier
 							.size(42.dp)
@@ -334,7 +338,7 @@ private fun TransactionHistoryCard(
 						)
 					}
 					Spacer(modifier = Modifier.width(12.dp))
-					Column {
+					Column(modifier = Modifier.weight(1f)) {
 						Text(
 							text = entry.title,
 							color = NightBlack,
@@ -351,12 +355,16 @@ private fun TransactionHistoryCard(
 						)
 					}
 				}
+				Spacer(modifier = Modifier.width(8.dp))
+				// Right side: Amount + Badge - fixed width to prevent wrapping
 				Column(horizontalAlignment = Alignment.End) {
 					Text(
 						text = uiModel.amount,
 						color = uiModel.amountColor,
 						style = MaterialTheme.typography.titleSmall,
-						fontWeight = FontWeight.SemiBold
+						fontWeight = FontWeight.SemiBold,
+						maxLines = 1,
+						softWrap = false
 					)
 					Spacer(modifier = Modifier.height(4.dp))
 					Row(
@@ -366,8 +374,7 @@ private fun TransactionHistoryCard(
 						Surface(
 							color = uiModel.badgeBackground,
 							shape = RoundedCornerShape(50),
-							shadowElevation = 0.dp,
-							modifier = Modifier.width(70.dp)
+							shadowElevation = 0.dp
 						) {
 							Text(
 								text = uiModel.badgeLabel,
@@ -375,12 +382,9 @@ private fun TransactionHistoryCard(
 								style = MaterialTheme.typography.labelSmall,
 								fontWeight = FontWeight.Medium,
 								maxLines = 1,
-								overflow = TextOverflow.Visible,
 								softWrap = false,
 								textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-								modifier = Modifier
-									.fillMaxWidth()
-									.padding(horizontal = 10.dp, vertical = 4.dp)
+								modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
 							)
 						}
 						Box(

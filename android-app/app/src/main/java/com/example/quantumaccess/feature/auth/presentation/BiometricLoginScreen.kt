@@ -96,11 +96,14 @@ fun BiometricLoginScreen(
                     val signInResult = googleAuthClient.signInWithIntent(dataIntent)
                     val idToken = signInResult.data?.idToken
                     if (idToken != null) {
+                        // Don't set isGoogleLoading = false here!
+                        // The ViewModel will take over with isLoading state
+                        // and we keep showing "Connecting" until navigation happens
                         onGoogleSignIn(idToken)
                     } else {
                         Toast.makeText(context, signInResult.errorMessage ?: "Google Sign-In failed", Toast.LENGTH_SHORT).show()
+                        isGoogleLoading = false
                     }
-                    isGoogleLoading = false
                 }
             } else {
                 isGoogleLoading = false

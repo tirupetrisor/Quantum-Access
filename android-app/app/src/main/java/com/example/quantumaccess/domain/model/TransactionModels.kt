@@ -107,7 +107,11 @@ data class TransactionAnalyticsSlice(
     val category: AnalyticsCategory
 )
 
-enum class AnalyticsCategory { QUANTUM, NORMAL, INTERCEPTED }
+enum class AnalyticsCategory { 
+    QUANTUM_SECURE,    // Quantum transactions (always secure)
+    NORMAL_SECURE,     // Normal transactions without issues
+    VULNERABLE         // Normal transactions that were compromised
+}
 
 data class QuantumProcessStep(
     val progress: Float,

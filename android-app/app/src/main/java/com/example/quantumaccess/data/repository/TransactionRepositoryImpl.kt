@@ -20,6 +20,7 @@ import com.example.quantumaccess.domain.model.TimelineStepStatus
 import com.example.quantumaccess.domain.model.TransactionAnalyticsSlice
 import com.example.quantumaccess.domain.model.TransactionChannel
 import com.example.quantumaccess.domain.model.TransactionScenario
+import com.example.quantumaccess.domain.model.TransactionSecurityState
 import com.example.quantumaccess.domain.model.TransactionHistoryEntry
 import com.example.quantumaccess.domain.model.TransactionRequest
 import com.example.quantumaccess.domain.model.TransactionResult
@@ -95,22 +96,33 @@ class TransactionRepositoryImpl(
                     null
                 }
 
+                // IMPORTANT: Păstrează datele locale de securitate dacă cele remote sunt incomplete
+                // Aceasta previne suprascrierea tranzacțiilor vulnerabile cu date incomplete
+                val resolvedIntercepted = security?.eveDetected ?: existing?.intercepted ?: false
+                val resolvedEveDetected = security?.eveDetected ?: existing?.eveDetected
+                val resolvedCompromised = security?.compromised ?: existing?.compromised
+                val resolvedStatus = processing?.status ?: existing?.status ?: "SUCCESS"
+                val resolvedMode = processing?.processingMode ?: existing?.mode ?: "NORMAL"
+                val resolvedSecurityScoreNormal = security?.securityScoreNormal ?: existing?.securityScoreNormal
+                val resolvedSecurityScoreQuantum = security?.securityScoreQuantum ?: existing?.securityScoreQuantum
+                val resolvedQber = security?.qber ?: existing?.qber
+
                 localEntities += LocalTransactionEntity(
                     transactionId = resolvedId,
                     userId = userId,
                     amount = amountVal,
                     beneficiary = beneficiaryValue,
-                    mode = processing?.processingMode ?: "NORMAL",
-                    status = processing?.status ?: "SUCCESS",
-                    intercepted = security?.eveDetected ?: false,
+                    mode = resolvedMode,
+                    status = resolvedStatus,
+                    intercepted = resolvedIntercepted,
                     lastUpdated = Instant.now(),
                     createdAt = resolvedCreatedAt,
                     scenario = dto.scenario,
-                    securityScoreNormal = security?.securityScoreNormal,
-                    securityScoreQuantum = security?.securityScoreQuantum,
-                    qber = security?.qber,
-                    eveDetected = security?.eveDetected,
-                    compromised = security?.compromised,
+                    securityScoreNormal = resolvedSecurityScoreNormal,
+                    securityScoreQuantum = resolvedSecurityScoreQuantum,
+                    qber = resolvedQber,
+                    eveDetected = resolvedEveDetected,
+                    compromised = resolvedCompromised,
                     patientId = dto.patientId,
                     accessReason = dto.accessReason
                 )
@@ -249,14 +261,29 @@ class TransactionRepositoryImpl(
         val total = transactions.size.toFloat()
         if (total == 0f) return emptyList()
 
-        val quantum = transactions.count { it.channel == com.example.quantumaccess.domain.model.TransactionChannel.QUANTUM }.toFloat()
-        val normal = transactions.count { it.channel == com.example.quantumaccess.domain.model.TransactionChannel.NORMAL }.toFloat()
-        val intercepted = transactions.count { it.securityState == com.example.quantumaccess.domain.model.TransactionSecurityState.ALERT }.toFloat()
+        // Categorii mutual exclusive (suma = 100%):
+        // 1. Quantum Secure: toate tranzacțiile Quantum (mereu securizate, chiar dacă Eve a fost detectat)
+        // 2. Normal Secure: tranzacții Normal FĂRĂ stare ALERT
+        // 3. Vulnerable: tranzacții Normal CU stare ALERT (compromisate)
+        
+        val quantumSecure = transactions.count { 
+            it.channel == TransactionChannel.QUANTUM 
+        }.toFloat()
+        
+        val vulnerable = transactions.count { 
+            it.channel == TransactionChannel.NORMAL && 
+            it.securityState == TransactionSecurityState.ALERT 
+        }.toFloat()
+        
+        val normalSecure = transactions.count { 
+            it.channel == TransactionChannel.NORMAL && 
+            it.securityState != TransactionSecurityState.ALERT 
+        }.toFloat()
 
         return listOf(
-            TransactionAnalyticsSlice("Quantum", (quantum / total) * 100, AnalyticsCategory.QUANTUM),
-            TransactionAnalyticsSlice("Normal", (normal / total) * 100, AnalyticsCategory.NORMAL),
-            TransactionAnalyticsSlice("Intercepted", (intercepted / total) * 100, AnalyticsCategory.INTERCEPTED)
+            TransactionAnalyticsSlice("Quantum", (quantumSecure / total) * 100, AnalyticsCategory.QUANTUM_SECURE),
+            TransactionAnalyticsSlice("Normal", (normalSecure / total) * 100, AnalyticsCategory.NORMAL_SECURE),
+            TransactionAnalyticsSlice("Vulnerable", (vulnerable / total) * 100, AnalyticsCategory.VULNERABLE)
         )
     }
 

@@ -59,16 +59,16 @@ fun LocalTransactionEntity.toDomainModel(): TransactionHistoryEntry {
 }
 
 /**
- * Builds transaction title based on mode and scenario
+ * Builds transaction title based on scenario only.
+ * Mode (Normal/Quantum) is shown separately in the badge.
  */
+@Suppress("UNUSED_PARAMETER")
 private fun buildTransactionTitle(mode: String, scenario: String?): String {
-    val scenarioLabel = when (scenario) {
+    return when (scenario) {
         "BANKING_PAYMENT" -> "Banking Payment"
         "MEDICAL_RECORD_ACCESS" -> "Medical Record Access"
         else -> "Transaction"
     }
-    val modeLabel = if (mode == "QUANTUM") "Quantum" else "Normal"
-    return "$scenarioLabel ($modeLabel)"
 }
 
 /**

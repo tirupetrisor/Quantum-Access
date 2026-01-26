@@ -308,9 +308,9 @@ private data class AnalyticsSliceUi(
 
 private fun TransactionAnalyticsSlice.toUiSlice(): AnalyticsSliceUi {
 	val color = when (category) {
-		AnalyticsCategory.QUANTUM -> DeepBlue
-		AnalyticsCategory.NORMAL -> Steel200
-		AnalyticsCategory.INTERCEPTED -> AccentOrange
+		AnalyticsCategory.QUANTUM_SECURE -> DeepBlue
+		AnalyticsCategory.NORMAL_SECURE -> Steel200  // Gray for normal transactions
+		AnalyticsCategory.VULNERABLE -> AlertRed
 	}
 	return AnalyticsSliceUi(label = label, value = value, color = color)
 }
@@ -371,7 +371,7 @@ private fun WhyThisMattersPanel(
 			WhyThisMattersBullet(
 				icon = Icons.Filled.Security,
 				iconColor = DeepBlue,
-				text = "Datele medicale expuse pot afecta tratamentul și viața privată."
+				text = "Exposed medical data can affect treatment and privacy."
 			)
 			
 			Spacer(modifier = Modifier.height(12.dp))
@@ -379,7 +379,7 @@ private fun WhyThisMattersPanel(
 			WhyThisMattersBullet(
 				icon = Icons.Filled.Shield,
 				iconColor = SecureGreen,
-				text = "Plățile compromise duc la pierderi financiare și fraudă."
+				text = "Compromised payments lead to financial losses and fraud."
 			)
 			
 			Spacer(modifier = Modifier.height(12.dp))
@@ -387,7 +387,7 @@ private fun WhyThisMattersPanel(
 			WhyThisMattersBullet(
 				icon = Icons.Filled.Lock,
 				iconColor = AccentOrange,
-				text = "Trecerea la soluții QKD (Quantum Key Distribution) protejează datele pe termen lung."
+				text = "Switching to QKD (Quantum Key Distribution) solutions protects data long-term."
 			)
 		}
 	}
