@@ -56,8 +56,9 @@ class LoginViewModel(app: Application) : AndroidViewModel(app) {
             
             result.fold(
                 onSuccess = {
-                    syncTransactionsForCurrentUser()
+                    // Navigate immediately, sync in background
                     _events.send(LoginEvent.Success)
+                    syncTransactionsInBackground()
                 },
                 onFailure = { err -> 
                     val msg = err.message ?: "Login failed"
@@ -90,8 +91,9 @@ class LoginViewModel(app: Application) : AndroidViewModel(app) {
 
             result.fold(
                 onSuccess = {
-                    syncTransactionsForCurrentUser()
+                    // Navigate immediately, sync in background
                     _events.send(LoginEvent.Success)
+                    syncTransactionsInBackground()
                 },
                 onFailure = { err ->
                     val msg = err.message ?: "Google Sign-In failed"
@@ -118,14 +120,18 @@ class LoginViewModel(app: Application) : AndroidViewModel(app) {
             // 2. Refresh Session Heartbeats
             repo.refreshSessionHeartbeat()
             val sessionRefreshed = repo.refreshSupabaseSessionIfNeeded()
-            
-            // 3. Sync Transactions (Best Effort)
-            if (sessionRefreshed) {
-                syncTransactionsSafe(localUser.userId)
-            }
 
             _uiState.update { it.copy(isLoading = false) }
+            
+            // Navigate immediately
             _events.send(LoginEvent.Success)
+            
+            // 3. Sync Transactions in background (Best Effort)
+            if (sessionRefreshed) {
+                viewModelScope.launch {
+                    syncTransactionsSafe(localUser.userId)
+                }
+            }
         }
     }
 
@@ -133,10 +139,16 @@ class LoginViewModel(app: Application) : AndroidViewModel(app) {
         _uiState.update { it.copy(error = null) }
     }
 
-    private suspend fun syncTransactionsForCurrentUser() {
-        val user = repo.getCurrentUser()
-        if (user != null) {
-            syncTransactionsSafe(user.userId)
+    /**
+     * Syncs transactions in a separate coroutine (fire-and-forget).
+     * This allows the user to navigate immediately while sync happens in background.
+     */
+    private fun syncTransactionsInBackground() {
+        viewModelScope.launch {
+            val user = repo.getCurrentUser()
+            if (user != null) {
+                syncTransactionsSafe(user.userId)
+            }
         }
     }
 
