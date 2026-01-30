@@ -64,7 +64,7 @@ fun SplashScreen(modifier: Modifier = Modifier, onContinue: () -> Unit = {}) {
             Spacer(modifier = Modifier.height(12.dp))
             AnimatedVisibility(visible = showTagline, enter = fadeIn(), exit = fadeOut()) {
                 Text(
-                    text = "Quantum-secured banking access",
+                    text = "Unlock the Unknown",
                     color = Silver.copy(alpha = 0.85f),
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center
