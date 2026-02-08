@@ -1,6 +1,5 @@
-# QuantumAccess
+# QuantumAccess: Unlock the Unknown
 
-Aplicație Android (Kotlin, Jetpack Compose) pentru **acces securizat cuantic (QKD)** în sectorul financiar și medical.
+Aplicație Android (Kotlin, Jetpack Compose) pentru **vot securizat cuantic (QKD)** pentru alegerile electorale din România.
 
-- **Sector Financiar**: plăți și transferuri bancare
-- **Sector Medical**: acces la fișe medicale
+
