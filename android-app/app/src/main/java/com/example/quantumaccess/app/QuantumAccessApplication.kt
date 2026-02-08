@@ -8,9 +8,15 @@ import com.example.quantumaccess.data.remote.RemoteTransactionDataSource
 import com.example.quantumaccess.data.repository.DeviceRepositoryImpl
 import com.example.quantumaccess.data.repository.QuantumTransactionRepository
 import com.example.quantumaccess.data.repository.TransactionRepositoryImpl
+import com.example.quantumaccess.data.repository.VoteRepositoryImpl
 import com.example.quantumaccess.data.sample.RepositoryProvider
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import com.example.quantumaccess.domain.repository.DeviceRepository
 import com.example.quantumaccess.domain.repository.TransactionRepository
+import com.example.quantumaccess.domain.repository.VoteRepository
 
 class QuantumAccessApplication : Application() {
 
@@ -22,6 +28,9 @@ class QuantumAccessApplication : Application() {
         private set
         
     lateinit var deviceRepository: DeviceRepository
+        private set
+
+    lateinit var voteRepository: VoteRepository
         private set
 
     override fun onCreate() {
@@ -58,7 +67,14 @@ class QuantumAccessApplication : Application() {
             prefs = prefs
         )
 
+        voteRepository = VoteRepositoryImpl(this, database.electionDao(), database.voteDao())
+
         // 4. Initialize Service Locator (Legacy bridge)
-        RepositoryProvider.initialize(transactionRepository, deviceRepository, quantumTransactionRepository)
+        RepositoryProvider.initialize(transactionRepository, deviceRepository, quantumTransactionRepository, voteRepository)
+
+        // Seed default elections if DB is empty
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            voteRepository.seedElectionsIfNeeded()
+        }
     }
 }

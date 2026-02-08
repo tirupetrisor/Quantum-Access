@@ -16,9 +16,20 @@ import androidx.navigation.navArgument
 import com.example.quantumaccess.feature.analytics.presentation.AnalyticsDashboardScreen
 import com.example.quantumaccess.feature.auth.presentation.BiometricLoginScreen
 import com.example.quantumaccess.feature.auth.presentation.BiometricSetupScreen
+import com.example.quantumaccess.feature.auth.presentation.CnpEntryScreen
+import com.example.quantumaccess.feature.auth.presentation.IdVerificationScreen
 import com.example.quantumaccess.feature.auth.presentation.RegisterScreen
 import com.example.quantumaccess.feature.dashboard.presentation.DashboardScreen
+import com.example.quantumaccess.feature.elections.presentation.CastVoteScreen
+import com.example.quantumaccess.feature.elections.presentation.ElectionDetailScreen
+import com.example.quantumaccess.feature.elections.presentation.ElectionsListScreen
+import com.example.quantumaccess.feature.elections.presentation.VoteHistoryScreen
+import com.example.quantumaccess.feature.findstation.presentation.FindStationScreen
+import com.example.quantumaccess.feature.guide.presentation.VotingGuideScreen
+import com.example.quantumaccess.feature.results.presentation.ElectionResultsScreen
 import com.example.quantumaccess.feature.history.presentation.TransactionHistoryScreen
+import com.example.quantumaccess.feature.station.presentation.StationResultsScreen
+import com.example.quantumaccess.feature.statistics.presentation.LiveStatisticsScreen
 import com.example.quantumaccess.feature.location.presentation.LocationVerificationScreen
 import com.example.quantumaccess.feature.quantum.presentation.QuantumChannelVisualizerScreen
 import com.example.quantumaccess.feature.splash.presentation.SplashScreen
@@ -28,6 +39,7 @@ import com.example.quantumaccess.feature.transactions.presentation.QuantumTransa
 import com.example.quantumaccess.feature.transactions.presentation.QuantumTransactionProcessingScreenV2
 import com.example.quantumaccess.feature.transactions.presentation.TransactionMode
 import com.example.quantumaccess.domain.model.TransactionScenario
+import com.example.quantumaccess.viewmodel.ElectionsViewModel
 import com.example.quantumaccess.viewmodel.LoginViewModel
 import com.example.quantumaccess.viewmodel.RegisterViewModel
 import kotlin.random.Random
@@ -40,8 +52,8 @@ fun AppNavGraph() {
 
     val onLogoutAction: () -> Unit = {
         globalLoginViewModel.logout {
-            navController.navigate(Routes.BiometricLogin) {
-                popUpTo(Routes.Splash) { inclusive = false }
+            navController.navigate(Routes.CnpEntry) {
+                popUpTo(0) { inclusive = true }
             }
         }
     }
@@ -50,10 +62,33 @@ fun AppNavGraph() {
 		composable(Routes.Splash) {
 			SplashScreen(
 				onContinue = {
-					navController.navigate(Routes.Register) {
+					navController.navigate(Routes.CnpEntry) {
 						popUpTo(Routes.Splash) { inclusive = true }
 					}
 				}
+			)
+		}
+		composable(Routes.CnpEntry) {
+			CnpEntryScreen(
+				onContinue = { cnp ->
+					navController.navigate("${Routes.IdVerification}?cnp=$cnp")
+				}
+			)
+		}
+		composable(
+			route = "${Routes.IdVerification}?cnp={cnp}",
+			arguments = listOf(navArgument("cnp") { type = NavType.StringType; defaultValue = "" })
+		) { backStackEntry ->
+			val cnp = backStackEntry.arguments?.getString("cnp").orEmpty()
+			IdVerificationScreen(
+				cnp = cnp,
+				onVerified = {
+					// Go straight to Dashboard — location is checked when voting
+					navController.navigate(Routes.Dashboard) {
+						popUpTo(Routes.CnpEntry) { inclusive = true }
+					}
+				},
+				onBack = { navController.popBackStack() }
 			)
 		}
 		composable(Routes.Register) {
@@ -165,12 +200,96 @@ fun AppNavGraph() {
 		}
 		composable(Routes.Dashboard) {
 			DashboardScreen(
-				onInitiateTransaction = {
-					navController.navigate(Routes.TransactionMode)
-				},
+				onOpenElections = { navController.navigate(Routes.ElectionsList) },
+				onOpenStatistics = { navController.navigate(Routes.LiveStatistics) },
+				onOpenVotingGuide = { navController.navigate(Routes.VotingGuide) },
+				onOpenFindStation = { navController.navigate(Routes.FindStation) },
+				onOpenResults = { navController.navigate(Routes.ElectionResults) },
+				onInitiateTransaction = { navController.navigate(Routes.TransactionMode) },
 				onOpenHistory = { navController.navigate(Routes.TransactionHistory) },
 				onOpenAnalytics = { navController.navigate(Routes.Analytics) },
 				onLogoutConfirm = onLogoutAction
+			)
+		}
+		composable(Routes.ElectionsList) {
+			val vm: ElectionsViewModel = viewModel()
+			val uiState by vm.uiState.collectAsState()
+			ElectionsListScreen(
+				elections = uiState.elections,
+				isLoading = uiState.isLoadingElections,
+				onElectionClick = { election ->
+					vm.selectElection(election)
+					navController.navigate(Routes.ElectionDetail)
+				},
+				onBack = { navController.popBackStack() }
+			)
+		}
+		composable(Routes.ElectionDetail) {
+			val backStackEntry = navController.getBackStackEntry(Routes.ElectionsList)
+			val vm: ElectionsViewModel = viewModel(backStackEntry)
+			val uiState by vm.uiState.collectAsState()
+			val election = uiState.selectedElection
+			if (election == null) {
+				LaunchedEffect(Unit) { navController.popBackStack() }
+			} else {
+				ElectionDetailScreen(
+					election = election,
+					selectedOption = uiState.selectedOption,
+					onOptionSelected = { vm.selectOption(it) },
+					onVoteWithQkd = { navController.navigate(Routes.CastVote) },
+					onBack = { navController.popBackStack() }
+				)
+			}
+		}
+		composable(Routes.CastVote) {
+			val backStackEntry = navController.getBackStackEntry(Routes.ElectionsList)
+			val vm: ElectionsViewModel = viewModel(backStackEntry)
+			val uiState by vm.uiState.collectAsState()
+			CastVoteScreen(
+				state = uiState.castVoteState,
+				onCastVote = { vm.castVote(simulateEve = false) },
+				onDone = {
+					vm.resetCastState()
+					navController.popBackStack(Routes.ElectionsList, inclusive = false)
+				},
+				onRetry = {
+					vm.resetCastState()
+					vm.castVote(simulateEve = false)
+				}
+			)
+		}
+		composable(Routes.VoteHistory) {
+			val vm: ElectionsViewModel = viewModel()
+			val uiState by vm.uiState.collectAsState()
+			VoteHistoryScreen(
+				votes = uiState.votes,
+				onBack = { navController.popBackStack() }
+			)
+		}
+		composable(Routes.LiveStatistics) {
+			LiveStatisticsScreen(
+				onBack = { navController.popBackStack() }
+			)
+		}
+		composable(Routes.VotingGuide) {
+			VotingGuideScreen(
+				onBack = { navController.popBackStack() }
+			)
+		}
+		composable(Routes.StationResults) {
+			StationResultsScreen(
+				onBack = { navController.popBackStack() }
+			)
+		}
+		composable(Routes.FindStation) {
+			FindStationScreen(
+				onBack = { navController.popBackStack() },
+				onNavigateToStation = { navController.popBackStack() }
+			)
+		}
+		composable(Routes.ElectionResults) {
+			ElectionResultsScreen(
+				onBack = { navController.popBackStack() }
 			)
 		}
 		composable(Routes.TransactionHistory) {

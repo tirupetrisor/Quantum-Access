@@ -89,6 +89,15 @@ dependencies {
     implementation(libs.slf4j.simple)
     implementation(libs.okhttp)
 
+    // CameraX
+    implementation(libs.camerax.camera2)
+    implementation(libs.camerax.lifecycle)
+    implementation(libs.camerax.view)
+
+    // ML Kit
+    implementation(libs.mlkit.face.detection)
+    implementation(libs.mlkit.text.recognition)
+
     // Room
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)

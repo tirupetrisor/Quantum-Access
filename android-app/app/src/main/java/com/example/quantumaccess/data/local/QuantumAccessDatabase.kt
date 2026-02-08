@@ -5,17 +5,21 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import com.example.quantumaccess.data.local.dao.ElectionDao
 import com.example.quantumaccess.data.local.dao.QuantumKeyDao
 import com.example.quantumaccess.data.local.dao.SessionDao
 import com.example.quantumaccess.data.local.dao.TransactionDao
 import com.example.quantumaccess.data.local.dao.UserDao
+import com.example.quantumaccess.data.local.dao.VoteDao
+import com.example.quantumaccess.data.local.entities.ElectionEntity
 import com.example.quantumaccess.data.local.entities.LocalTransactionEntity
 import com.example.quantumaccess.data.local.entities.LocalUserEntity
 import com.example.quantumaccess.data.local.entities.QuantumKeyEntity
 import com.example.quantumaccess.data.local.entities.SessionEntity
+import com.example.quantumaccess.data.local.entities.VoteEntity
 
 /**
- * Baza de date principală Room pentru QuantumAccess.
+ * Baza de date principală Room pentru QuantumAccess / Quantum Vote.
  * Definește entitățile, versiunea și convertoarele de tip.
  */
 @Database(
@@ -23,10 +27,12 @@ import com.example.quantumaccess.data.local.entities.SessionEntity
         LocalUserEntity::class,
         SessionEntity::class,
         LocalTransactionEntity::class,
-        QuantumKeyEntity::class
+        QuantumKeyEntity::class,
+        ElectionEntity::class,
+        VoteEntity::class
     ],
-    version = 9,
-    exportSchema = true
+    version = 10,
+    exportSchema = false
 )
 @TypeConverters(com.example.quantumaccess.data.local.TypeConverters::class)
 abstract class QuantumAccessDatabase : RoomDatabase() {
@@ -35,6 +41,8 @@ abstract class QuantumAccessDatabase : RoomDatabase() {
     abstract fun sessionDao(): SessionDao
     abstract fun transactionDao(): TransactionDao
     abstract fun quantumKeyDao(): QuantumKeyDao
+    abstract fun electionDao(): ElectionDao
+    abstract fun voteDao(): VoteDao
     companion object {
         @Volatile
         private var INSTANCE: QuantumAccessDatabase? = null

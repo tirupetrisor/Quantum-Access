@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,11 +42,14 @@ private val NeonGreen = SecureGreen
 @Composable
 fun SplashScreen(modifier: Modifier = Modifier, onContinue: () -> Unit = {}) {
     var showTagline by remember { mutableStateOf(false) }
+    var showSubtitle by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        delay(500)
+        delay(400)
         showTagline = true
-        delay(500)
+        delay(300)
+        showSubtitle = true
+        delay(400)
         onContinue()
     }
 
@@ -61,13 +65,25 @@ fun SplashScreen(modifier: Modifier = Modifier, onContinue: () -> Unit = {}) {
             QuantumLogoNeonCard()
             Spacer(modifier = Modifier.height(24.dp))
             BrandTitle()
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             AnimatedVisibility(visible = showTagline, enter = fadeIn(), exit = fadeOut()) {
                 Text(
                     text = "Unlock the Unknown",
-                    color = Silver.copy(alpha = 0.85f),
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center
+                    color = Color(0xFF00D9FF),
+                    style = MaterialTheme.typography.bodyLarge,
+                    textAlign = TextAlign.Center,
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = 2.sp
+                )
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            AnimatedVisibility(visible = showSubtitle, enter = fadeIn(), exit = fadeOut()) {
+                Text(
+                    text = "QKD · BB84 · ML Kit Identity · GPS Polling · Disponibil oriunde",
+                    color = Silver.copy(alpha = 0.55f),
+                    style = MaterialTheme.typography.labelSmall,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 40.dp)
                 )
             }
         }
@@ -97,5 +113,3 @@ private fun BrandTitle() {
 private fun SplashPreview() {
     SplashScreen()
 }
-
-
